@@ -40,7 +40,13 @@ country = st.selectbox(
 
 keywords_input = st.text_area("Enter keywords (one per line)")
 
-# Move current DR input above the current referring domains field
+# Show the slider for domains per month
+st.session_state.domains_per_month = st.slider(
+    "Domains per Month",
+    0, 100, st.session_state.domains_per_month
+)
+
+# Place the Current DR and Current Referring Domains below the slider
 current_dr = st.number_input("Enter your current Domain Rating (DR)", min_value=0, max_value=100, value=50)
 st.session_state.current_domains = st.number_input(
     "Current Referring Domains",
@@ -59,6 +65,7 @@ if st.button("Analyze Keywords"):
         refdomains_list = []
         estimated_traffic = []
         positions = []
+        max_traffic_list = []
 
         if st.session_state.testing_mode:
             # Generate random data for testing mode
@@ -67,8 +74,10 @@ if st.button("Analyze Keywords"):
                 ur_list.append(random.uniform(0, 100))  # Random URL rating
                 backlinks_list.append(random.randint(10, 5000))  # Random backlinks
                 refdomains_list.append(random.randint(5, 1000))  # Random referring domains
-                estimated_traffic.append(random.randint(100, 50000))  # Random traffic
+                traffic_values = [random.randint(100, 50000) for _ in range(10)]  # Random traffic values
+                estimated_traffic.append(sum(traffic_values) / 10)
                 positions.append(random.randint(1, 50))  # Random estimated position
+                max_traffic_list.append(max(traffic_values))  # Max traffic in the top 10
         else:
             # Fetch data from Ahrefs API for each keyword
             for keyword in keywords:
@@ -105,13 +114,15 @@ if st.button("Analyze Keywords"):
                             avg_refdomains = sum(item.get('refdomains', 0) or 0 for item in data['positions']) / len(data['positions'])
                             avg_traffic = sum(item.get('traffic', 0) or 0 for item in data['positions']) / len(data['positions'])
                             avg_position = sum(item.get('position', 1) or 1 for item in data['positions']) / len(data['positions'])
+                            max_traffic = max(item.get('traffic', 0) or 0 for item in data['positions'])
 
-                            dr_list.append(avg_dr)
-                            ur_list.append(avg_ur)
-                            backlinks_list.append(avg_backlinks)
-                            refdomains_list.append(avg_refdomains)
-                            estimated_traffic.append(avg_traffic)
-                            positions.append(avg_position)
+                            dr_list.append(round(avg_dr))
+                            ur_list.append(round(avg_ur))
+                            backlinks_list.append(round(avg_backlinks))
+                            refdomains_list.append(round(avg_refdomains))
+                            estimated_traffic.append(round(avg_traffic))
+                            positions.append(round(avg_position))
+                            max_traffic_list.append(round(max_traffic))
                         else:
                             # Handle case where no 'positions' data is found
                             dr_list.append(0)
@@ -120,6 +131,7 @@ if st.button("Analyze Keywords"):
                             refdomains_list.append(0)
                             estimated_traffic.append(0)
                             positions.append(0)
+                            max_traffic_list.append(0)
                     elif response.status_code == 403:
                         st.error(f"Access forbidden. Check your API key and permissions.")
                         break  # Stop processing if API key is invalid
@@ -134,6 +146,7 @@ if st.button("Analyze Keywords"):
                     refdomains_list.append(0)
                     estimated_traffic.append(0)
                     positions.append(0)
+                    max_traffic_list.append(0)
 
         # Store keyword data in session state
         st.session_state.keywords_data = {
@@ -143,6 +156,7 @@ if st.button("Analyze Keywords"):
             "Backlinks - Top 10 Avg": backlinks_list,
             "Referring Domains - Top 10 Avg": refdomains_list,
             "Initial Traffic - Top 10 Avg": estimated_traffic,
+            "Max Traffic - Top 10": max_traffic_list,
             "Position - Top 10 Avg": positions
         }
 
@@ -152,12 +166,6 @@ if st.session_state.keywords_data:
     st.write("Averages for the Top 10 Results for Each Provided Keyword:")
     st.table(keywords_df)
 
-# Show the slider and use session state to keep its value
-st.session_state.domains_per_month = st.slider(
-    "Domains per Month",
-    0, 100, st.session_state.domains_per_month
-)
-
 # If keyword data is available, calculate and plot forecast
 if st.session_state.keywords_data:
     keywords_data = st.session_state.keywords_data
@@ -165,7 +173,7 @@ if st.session_state.keywords_data:
     estimated_traffic = keywords_data["Initial Traffic - Top 10 Avg"]
     avg_dr_list = keywords_data["Domain Rating (DR) - Top 10 Avg"]
     refdomains_list = keywords_data["Referring Domains - Top 10 Avg"]
-    positions = keywords_data["Position - Top 10 Avg"]
+    max_traffic_list = keywords_data["Max Traffic - Top 10"]
 
     # Estimating traffic based on domains per month and DR
     total_forecast = []
@@ -186,12 +194,14 @@ if st.session_state.keywords_data:
             additional_domains = month * st.session_state.domains_per_month
             total_domains = current_domains + additional_domains
             estimated_total_traffic = traffic + (total_domains * average_traffic_per_domain) * dr_adjustment_factor
-            forecasted_traffic.append(estimated_total_traffic)
+            # Cap the traffic to the maximum traffic found in the SERP
+            capped_traffic = min(estimated_total_traffic, max_traffic_list[i])
+            forecasted_traffic.append(round(capped_traffic))
 
             # Add hover text information
             hover_text.append(
                 f"Keyword: {keywords[i]}<br>"
-                f"Estimated Traffic: {estimated_total_traffic:.0f}<br>Position: {positions[i]}"
+                f"Estimated Traffic: {round(capped_traffic)}"
             )
 
         traffic_forecast.append(forecasted_traffic)
