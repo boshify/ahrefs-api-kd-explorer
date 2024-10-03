@@ -5,6 +5,7 @@ import random
 import plotly.graph_objects as go
 import io
 from requests.utils import quote
+import numpy as np
 
 # Backend toggle for enabling/disabling testing mode
 TEST_MODE_ENABLED = True  # Set this to False to completely disable testing mode
@@ -59,8 +60,16 @@ if st.button("Analyze Keywords"):
             for keyword in keywords:
                 dr_list.append(random.uniform(0, 100))  # Random domain rating
                 ur_list.append(random.uniform(0, 100))  # Random URL rating
-                backlinks_list.append(random.randint(10, 5000))  # Random backlinks
-                refdomains_list.append(random.randint(5, 1000))  # Random referring domains
+                backlinks_values = [random.randint(10, 5000) for _ in range(10)]
+                refdomain_values = [random.randint(5, 1000) for _ in range(10)]
+                
+                # Remove outliers from the test data
+                backlinks_values = [x for x in backlinks_values if x <= 10 * np.median(backlinks_values)]
+                refdomain_values = [x for x in refdomain_values if x <= 10 * np.median(refdomain_values)]
+                
+                backlinks_list.append(sum(backlinks_values) / len(backlinks_values))
+                refdomains_list.append(sum(refdomain_values) / len(refdomain_values))
+                
                 traffic_values = [random.randint(100, 50000) for _ in range(10)]  # Random traffic values
                 estimated_traffic.append(sum(traffic_values) / 10)
                 max_traffic_list.append(sum(sorted(traffic_values, reverse=True)[:3]) / 3)  # Average of the top 3 traffic values
@@ -93,11 +102,18 @@ if st.button("Analyze Keywords"):
                         data = response.json()
                         # Extract fields and store in lists
                         if 'positions' in data and len(data['positions']) > 0:
-                            # Calculate the average metrics from the top 10 results
+                            # Extract individual values
+                            backlinks_values = [item.get('backlinks', 0) or 0 for item in data['positions']]
+                            refdomain_values = [item.get('refdomains', 0) or 0 for item in data['positions']]
+
+                            # Remove outliers
+                            backlinks_values = [x for x in backlinks_values if x <= 10 * np.median(backlinks_values)]
+                            refdomain_values = [x for x in refdomain_values if x <= 10 * np.median(refdomain_values)]
+
                             avg_dr = sum(item.get('domain_rating', 0) or 0 for item in data['positions']) / len(data['positions'])
                             avg_ur = sum(item.get('url_rating', 0) or 0 for item in data['positions']) / len(data['positions'])
-                            avg_backlinks = sum(item.get('backlinks', 0) or 0 for item in data['positions']) / len(data['positions'])
-                            avg_refdomains = sum(item.get('refdomains', 0) or 0 for item in data['positions']) / len(data['positions'])
+                            avg_backlinks = sum(backlinks_values) / len(backlinks_values)
+                            avg_refdomains = sum(refdomain_values) / len(refdomain_values)
                             avg_traffic = sum(item.get('traffic', 0) or 0 for item in data['positions']) / len(data['positions'])
                             top_3_traffic = sum(sorted([item.get('traffic', 0) or 0 for item in data['positions']], reverse=True)[:3]) / 3
 
@@ -144,7 +160,7 @@ if st.button("Analyze Keywords"):
 # Display the table outside of the button block to persist it
 if st.session_state.keywords_data:
     keywords_df = pd.DataFrame(st.session_state.keywords_data)
-    st.write("Averages for the Top 10 Results for Each Provided Keyword:")
+    st.write("Averages for the Top 10 Results for Each Provided Keyword (Outliers Excluded):")
     st.table(keywords_df)
 
 # Show the slider for domains per month
@@ -181,22 +197,21 @@ if st.session_state.keywords_data:
         # Calculate a DR adjustment factor (70% weight for DR, 30% for referring domains)
         dr_weight = 0.7
         domain_weight = 0.3
-        influence_score = (dr_weight * (current_dr / avg_dr_list[i] if avg_dr_list[i] > 0 else 1)) + (domain_weight * (st.session_state.current_domains / refdomains_list[i] if refdomains_list[i] > 0 else 1))
 
-        # Calculate forecasted traffic for each month, up to 12 months
         forecasted_traffic = []
         hover_text = []
         for month in range(12):  # 12 months forecast
             additional_domains = month * st.session_state.domains_per_month
             total_domains = current_domains + additional_domains
-            estimated_total_traffic = traffic + (total_domains * average_traffic_per_domain) * influence_score
-
-            # Cap the traffic to the average of the top 3 traffic values
-            capped_traffic = min(estimated_total_traffic, max_traffic_list[i])
-            forecasted_traffic.append(round(capped_traffic))
+            influence_score = (dr_weight * (current_dr / avg_dr_list[i] if avg_dr_list[i] > 0 else 1)) + (domain_weight * (total_domains / refdomains_list[i] if refdomains_list[i] > 0 else 1))
 
             # Estimate position based on influence score
             estimated_position = max(1, round(10 / influence_score))  # Position ranges from 1 to 10
+
+            # Calculate traffic, capping it to the average of the top 3 traffic values
+            estimated_total_traffic = traffic + (total_domains * average_traffic_per_domain) * influence_score
+            capped_traffic = min(estimated_total_traffic, max_traffic_list[i])
+            forecasted_traffic.append(round(capped_traffic))
 
             # Add hover text information
             hover_text.append(
