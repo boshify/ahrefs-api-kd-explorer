@@ -59,7 +59,7 @@ if st.button("Analyze Keywords"):
                 positions.append(random.randint(1, 50))  # Random estimated position
         else:
             # Fetch data from Ahrefs API for each keyword
-            for keyword in keywords:
+            for idx, keyword in enumerate(keywords):
                 keyword = keyword.strip()
                 response = requests.get(
                     f"https://api.ahrefs.com/v3/serp-overview/serp-overview",
@@ -84,7 +84,7 @@ if st.button("Analyze Keywords"):
                         backlinks_list.append(entry.get('backlinks', 0))
                         refdomains_list.append(entry.get('refdomains', 0))
                         estimated_traffic.append(entry.get('traffic', 0))
-                        positions.append(entry.get('position', 0))
+                        positions.append(entry.get('position', idx + 1))  # Assign position based on index if not available
                 else:
                     st.error(f"Failed to fetch data for keyword: {keyword}")
 
@@ -103,7 +103,7 @@ if st.button("Analyze Keywords"):
         if len(estimated_traffic) < num_keywords:
             estimated_traffic.extend([0] * (num_keywords - len(estimated_traffic)))
         if len(positions) < num_keywords:
-            positions.extend([0] * (num_keywords - len(positions)))
+            positions.extend([idx + 1 for idx in range(num_keywords - len(positions))])  # Default positions if missing
 
         # Store keyword data in session state
         st.session_state.keywords_data = {
