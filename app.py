@@ -208,9 +208,9 @@ if st.session_state.keywords_data:
         dr_values = np.array([avg_dr_list[i]] * len(positions))
         domain_values = np.array([refdomains_list[i]] * len(positions))
         
-        # Calculate the Pearson correlations
-        corr_dr = np.corrcoef(positions, dr_values)[0, 1] if len(positions) > 1 else 0
-        corr_domains = np.corrcoef(positions, domain_values)[0, 1] if len(positions) > 1 else 0
+        # Calculate the Pearson correlations, handling NaN values
+        corr_dr = np.nan_to_num(np.corrcoef(positions, dr_values)[0, 1], nan=0)
+        corr_domains = np.nan_to_num(np.corrcoef(positions, domain_values)[0, 1], nan=0)
         
         # Calculate the weightings based on the absolute correlations
         corr_dr_abs = abs(corr_dr)
