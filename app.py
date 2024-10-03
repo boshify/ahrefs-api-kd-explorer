@@ -54,6 +54,7 @@ if st.button("Analyze Keywords"):
         refdomains_list = []
         estimated_traffic = []
         max_traffic_list = []
+        position_list = []
 
         if st.session_state.testing_mode:
             # Generate random data for testing mode
@@ -62,8 +63,9 @@ if st.button("Analyze Keywords"):
                 ur_list.append(random.uniform(0, 100))  # Random URL rating
                 backlinks_values = [random.randint(10, 5000) for _ in range(10)]
                 refdomain_values = [random.randint(5, 1000) for _ in range(10)]
-                
-                # Remove outliers from the test data
+                position_values = [i + 1 for i in range(10)]  # Positions from 1 to 10
+
+                # Remove outliers
                 backlinks_values = [x for x in backlinks_values if x <= 10 * np.median(backlinks_values)]
                 refdomain_values = [x for x in refdomain_values if x <= 10 * np.median(refdomain_values)]
                 
@@ -73,6 +75,7 @@ if st.button("Analyze Keywords"):
                 traffic_values = [random.randint(100, 50000) for _ in range(10)]  # Random traffic values
                 estimated_traffic.append(sum(traffic_values) / 10)
                 max_traffic_list.append(sum(sorted(traffic_values, reverse=True)[:3]) / 3)  # Average of the top 3 traffic values
+                position_list.append(position_values)
         else:
             # Fetch data from Ahrefs API for each keyword
             for keyword in keywords:
@@ -105,6 +108,7 @@ if st.button("Analyze Keywords"):
                             # Extract individual values
                             backlinks_values = [item.get('backlinks', 0) or 0 for item in data['positions']]
                             refdomain_values = [item.get('refdomains', 0) or 0 for item in data['positions']]
+                            position_values = [item.get('position', 1) or 1 for item in data['positions']]
 
                             # Remove outliers
                             backlinks_values = [x for x in backlinks_values if x <= 10 * np.median(backlinks_values)]
@@ -123,6 +127,7 @@ if st.button("Analyze Keywords"):
                             refdomains_list.append(round(avg_refdomains))
                             estimated_traffic.append(round(avg_traffic))
                             max_traffic_list.append(round(top_3_traffic))
+                            position_list.append(position_values)
                         else:
                             # Handle case where no 'positions' data is found
                             dr_list.append(0)
@@ -131,6 +136,7 @@ if st.button("Analyze Keywords"):
                             refdomains_list.append(0)
                             estimated_traffic.append(0)
                             max_traffic_list.append(0)
+                            position_list.append([1] * 10)  # Default positions
                     elif response.status_code == 403:
                         st.error(f"Access forbidden. Check your API key and permissions.")
                         break  # Stop processing if API key is invalid
@@ -145,6 +151,7 @@ if st.button("Analyze Keywords"):
                     refdomains_list.append(0)
                     estimated_traffic.append(0)
                     max_traffic_list.append(0)
+                    position_list.append([1] * 10)  # Default positions
 
         # Store keyword data in session state
         st.session_state.keywords_data = {
@@ -155,6 +162,7 @@ if st.button("Analyze Keywords"):
             "Referring Domains - Top 10 Avg": refdomains_list,
             "Initial Traffic - Top 10 Avg": estimated_traffic,
             "Max Traffic - Top 3 Avg": max_traffic_list,
+            "Position List": position_list
         }
 
 # Display the table outside of the button block to persist it
@@ -184,6 +192,7 @@ if st.session_state.keywords_data:
     avg_dr_list = keywords_data["Domain Rating (DR) - Top 10 Avg"]
     refdomains_list = keywords_data["Referring Domains - Top 10 Avg"]
     max_traffic_list = keywords_data["Max Traffic - Top 3 Avg"]
+    position_list = keywords_data["Position List"]
 
     # Estimating traffic and ranking position
     total_forecast = []
@@ -194,16 +203,28 @@ if st.session_state.keywords_data:
         current_domains = st.session_state.current_domains if st.session_state.current_domains > 0 else 1  # Avoid division by zero
         average_traffic_per_domain = traffic / current_domains
 
-        # Calculate a DR adjustment factor (70% weight for DR, 30% for referring domains)
-        dr_weight = 0.7
-        domain_weight = 0.3
+        # Calculate the correlations and weightings
+        positions = np.array(position_list[i])
+        dr_values = np.array([avg_dr_list[i]] * len(positions))
+        domain_values = np.array([refdomains_list[i]] * len(positions))
+        
+        # Calculate the Pearson correlations
+        corr_dr = np.corrcoef(positions, dr_values)[0, 1]
+        corr_domains = np.corrcoef(positions, domain_values)[0, 1]
+        
+        # Calculate the weightings based on the absolute correlations
+        corr_dr_abs = abs(corr_dr)
+        corr_domains_abs = abs(corr_domains)
+        total_influence = corr_dr_abs + corr_domains_abs
+        weight_dr = corr_dr_abs / total_influence if total_influence != 0 else 0.5
+        weight_domains = corr_domains_abs / total_influence if total_influence != 0 else 0.5
 
         forecasted_traffic = []
         hover_text = []
         for month in range(12):  # 12 months forecast
             additional_domains = month * st.session_state.domains_per_month
             total_domains = current_domains + additional_domains
-            influence_score = (dr_weight * (current_dr / avg_dr_list[i] if avg_dr_list[i] > 0 else 1)) + (domain_weight * (total_domains / refdomains_list[i] if refdomains_list[i] > 0 else 1))
+            influence_score = (weight_dr * (current_dr / avg_dr_list[i] if avg_dr_list[i] > 0 else 1)) + (weight_domains * (total_domains / refdomains_list[i] if refdomains_list[i] > 0 else 1))
 
             # Estimate position based on influence score
             estimated_position = max(1, round(10 / influence_score))  # Position ranges from 1 to 10
