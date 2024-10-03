@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import random
 import plotly.graph_objects as go
+import io
 
 # Backend toggle for enabling/disabling testing mode
 TEST_MODE_ENABLED = True  # Set this to False to completely disable testing mode
@@ -44,6 +45,7 @@ if st.button("Analyze Keywords"):
         backlinks_list = []
         refdomains_list = []
         estimated_traffic = []
+        positions = []
 
         if st.session_state.testing_mode:
             # Generate random data for testing mode
@@ -54,6 +56,7 @@ if st.button("Analyze Keywords"):
                 backlinks_list.append(random.randint(10, 5000))  # Random backlinks
                 refdomains_list.append(random.randint(5, 1000))  # Random referring domains
                 estimated_traffic.append(random.randint(100, 50000))  # Random traffic
+                positions.append(random.randint(1, 50))  # Random estimated position
         else:
             # Fetch data from Ahrefs API for each keyword
             for keyword in keywords:
@@ -81,6 +84,7 @@ if st.button("Analyze Keywords"):
                         backlinks_list.append(entry.get('backlinks', 0))
                         refdomains_list.append(entry.get('refdomains', 0))
                         estimated_traffic.append(entry.get('traffic', 0))
+                        positions.append(entry.get('position', 0))
                 else:
                     st.error(f"Failed to fetch data for keyword: {keyword}")
 
@@ -98,6 +102,8 @@ if st.button("Analyze Keywords"):
             refdomains_list.extend([0] * (num_keywords - len(refdomains_list)))
         if len(estimated_traffic) < num_keywords:
             estimated_traffic.extend([0] * (num_keywords - len(estimated_traffic)))
+        if len(positions) < num_keywords:
+            positions.extend([0] * (num_keywords - len(positions)))
 
         # Store keyword data in session state
         st.session_state.keywords_data = {
@@ -107,7 +113,8 @@ if st.button("Analyze Keywords"):
             "URL Rating (UR)": ur_list,
             "Backlinks": backlinks_list,
             "Referring Domains": refdomains_list,
-            "Initial Traffic": estimated_traffic
+            "Initial Traffic": estimated_traffic,
+            "Position": positions
         }
 
 # Display the table outside of the button block to persist it
@@ -134,6 +141,7 @@ if st.session_state.keywords_data:
     keywords = keywords_data["Keyword"]
     estimated_traffic = keywords_data["Initial Traffic"]
     refdomains_list = keywords_data["Referring Domains"]
+    positions = keywords_data["Position"]
 
     # Estimating traffic based on domains per month
     total_forecast = []
@@ -154,7 +162,10 @@ if st.session_state.keywords_data:
             forecasted_traffic.append(estimated_total_traffic)
 
             # Add hover text information
-            hover_text.append(f"Keyword: {keywords[i]}<br>Estimated Domains: {total_domains}<br>Estimated Traffic: {estimated_total_traffic:.0f}")
+            hover_text.append(
+                f"Keyword: {keywords[i]}<br>Estimated Domains: {total_domains}<br>"
+                f"Estimated Traffic: {estimated_total_traffic:.0f}<br>Position: {positions[i]}"
+            )
 
         traffic_forecast.append(forecasted_traffic)
         hover_texts.append(hover_text)
@@ -190,13 +201,25 @@ if st.session_state.keywords_data:
         line=dict(color='black', width=2, dash='dash')
     ))
 
-    # Update layout to display full numbers on the y-axis
+    # Update layout to display full numbers on the y-axis and adjust figure height
     fig.update_layout(
         title='Estimated Traffic Forecast Based on Domains per Month',
         xaxis_title='Months',
         yaxis_title='Estimated Traffic',
         yaxis=dict(tickformat=','),
-        hovermode='x unified'
+        hovermode='x unified',
+        height=600  # Adjust the chart height
     )
 
     st.plotly_chart(fig)
+
+    # Create CSV download functionality
+    csv_output = plot_df.T
+    csv_buffer = io.StringIO()
+    csv_output.to_csv(csv_buffer)
+    st.download_button(
+        label="Download Forecast Data as CSV",
+        data=csv_buffer.getvalue(),
+        file_name='forecasted_traffic.csv',
+        mime='text/csv'
+    )
