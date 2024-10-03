@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 
 # Streamlit UI
-st.title("Ahrefs Keyword Analysis Tool")
+st.title("Ahrefs Keyword Rankability Forecaster")
 api_key = st.text_input("Enter your Ahrefs API Key")
 url_input = st.text_input("Enter the Ahrefs URL")
 keywords_input = st.text_area("Enter keywords (one per line)")
