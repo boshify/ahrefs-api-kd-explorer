@@ -4,7 +4,7 @@ import pandas as pd
 import random
 import plotly.graph_objects as go
 import io
-from datetime import datetime
+from requests.utils import quote
 
 # Backend toggle for enabling/disabling testing mode
 TEST_MODE_ENABLED = True  # Set this to False to completely disable testing mode
@@ -38,12 +38,6 @@ country = st.selectbox(
     ["us", "uk", "ca", "au", "de", "fr", "es", "it", "nl", "jp", "in", "br", "mx", "ru", "cn"]
 )
 
-# Date input (now includes time for full datetime format)
-selected_date = st.date_input("Select Date", datetime.now()).strftime('%Y-%m-%dT00:00:00')
-
-# Optional top positions parameter
-top_positions = st.slider("Top Positions to Return (Optional)", 1, 100, 10)
-
 keywords_input = st.text_area("Enter keywords (one per line)")
 
 if st.button("Analyze Keywords"):
@@ -75,21 +69,21 @@ if st.button("Analyze Keywords"):
             for keyword in keywords:
                 keyword = keyword.strip()
                 try:
-                    # Construct the API request URL
+                    # URL-encode the keyword
+                    encoded_keyword = quote(keyword)
+
+                    # Construct the API request URL without the date parameter
                     api_url = (
                         f"https://api.ahrefs.com/v3/serp-overview/serp-overview"
-                        f"?country={country}&date={selected_date}&keyword={keyword}"
+                        f"?country={country}&keyword={encoded_keyword}"
                         f"&select=url,title,position,type,ahrefs_rank,domain_rating,"
                         f"url_rating,backlinks,refdomains,traffic,value,keywords,"
                         f"top_keyword,top_keyword_volume,update_date"
                     )
-                    # Include top_positions if specified
-                    if top_positions:
-                        api_url += f"&top_positions={top_positions}"
 
                     response = requests.get(api_url, headers={
                         "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json"
+                        "Accept": "application/json"
                     })
 
                     if response.status_code == 200:
@@ -114,6 +108,9 @@ if st.button("Analyze Keywords"):
                             refdomains_list.append(0)
                             estimated_traffic.append(0)
                             positions.append(0)
+                    elif response.status_code == 403:
+                        st.error(f"Access forbidden. Check your API key and permissions. Keyword: {keyword}")
+                        break  # Stop processing if API key is invalid
                     else:
                         st.error(f"Failed to fetch data for keyword: {keyword}, Status Code: {response.status_code}")
                         word_counts.append(0)
