@@ -40,8 +40,12 @@ country = st.selectbox(
 
 keywords_input = st.text_area("Enter keywords (one per line)")
 
-# New field: Current Domain Rating (DR)
+# Move current DR input above the current referring domains field
 current_dr = st.number_input("Enter your current Domain Rating (DR)", min_value=0, max_value=100, value=50)
+st.session_state.current_domains = st.number_input(
+    "Current Referring Domains",
+    min_value=0, value=st.session_state.current_domains
+)
 
 if st.button("Analyze Keywords"):
     if (api_key and keywords_input) or (TEST_MODE_ENABLED and st.session_state.testing_mode):
@@ -95,12 +99,12 @@ if st.button("Analyze Keywords"):
                         # Extract fields and store in lists
                         if 'positions' in data and len(data['positions']) > 0:
                             # Calculate the average metrics from the top 10 results
-                            avg_dr = sum(item.get('domain_rating', 0) for item in data['positions']) / len(data['positions'])
-                            avg_ur = sum(item.get('url_rating', 0) for item in data['positions']) / len(data['positions'])
-                            avg_backlinks = sum(item.get('backlinks', 0) for item in data['positions']) / len(data['positions'])
-                            avg_refdomains = sum(item.get('refdomains', 0) for item in data['positions']) / len(data['positions'])
-                            avg_traffic = sum(item.get('traffic', 0) for item in data['positions']) / len(data['positions'])
-                            avg_position = sum(item.get('position', 1) for item in data['positions']) / len(data['positions'])
+                            avg_dr = sum(item.get('domain_rating', 0) or 0 for item in data['positions']) / len(data['positions'])
+                            avg_ur = sum(item.get('url_rating', 0) or 0 for item in data['positions']) / len(data['positions'])
+                            avg_backlinks = sum(item.get('backlinks', 0) or 0 for item in data['positions']) / len(data['positions'])
+                            avg_refdomains = sum(item.get('refdomains', 0) or 0 for item in data['positions']) / len(data['positions'])
+                            avg_traffic = sum(item.get('traffic', 0) or 0 for item in data['positions']) / len(data['positions'])
+                            avg_position = sum(item.get('position', 1) or 1 for item in data['positions']) / len(data['positions'])
 
                             dr_list.append(avg_dr)
                             ur_list.append(avg_ur)
@@ -152,12 +156,6 @@ if st.session_state.keywords_data:
 st.session_state.domains_per_month = st.slider(
     "Domains per Month",
     0, 100, st.session_state.domains_per_month
-)
-
-# Input for current domains
-st.session_state.current_domains = st.number_input(
-    "Current Referring Domains",
-    min_value=0, value=st.session_state.current_domains
 )
 
 # If keyword data is available, calculate and plot forecast
