@@ -2,6 +2,10 @@ import streamlit as st
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
+import random
+
+# Backend toggle for enabling/disabling testing mode
+TEST_MODE_ENABLED = True  # Set this to False to completely disable testing mode
 
 # Set Streamlit to wide mode
 st.set_page_config(layout="wide")
@@ -19,13 +23,17 @@ if 'current_domains' not in st.session_state:
 if 'keywords_data' not in st.session_state:
     st.session_state.keywords_data = None
 
+# Display testing mode slider if testing mode is enabled
+if TEST_MODE_ENABLED:
+    st.session_state.testing_mode = st.checkbox("Enable Testing Mode (Generate Random Data)", False)
+
 # Input fields
 api_key = st.text_input("Enter your Ahrefs API Key")
 url_input = st.text_input("Enter the Ahrefs URL")
 keywords_input = st.text_area("Enter keywords (one per line)")
 
 if st.button("Analyze Keywords"):
-    if api_key and url_input and keywords_input:
+    if (api_key and url_input and keywords_input) or (TEST_MODE_ENABLED and st.session_state.testing_mode):
         # Process the input keywords
         keywords = keywords_input.strip().split('\n')
         
@@ -37,34 +45,44 @@ if st.button("Analyze Keywords"):
         refdomains_list = []
         estimated_traffic = []
 
-        # Fetch data from Ahrefs API for each keyword
-        for keyword in keywords:
-            keyword = keyword.strip()
-            response = requests.get(
-                f"https://api.ahrefs.com/v3/serp-overview/serp-overview",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                params={
-                    "country": "us",
-                    "keyword": keyword,
-                    "select": "url,title,position,type,ahrefs_rank,domain_rating,url_rating,backlinks,refdomains,traffic,value,keywords,top_keyword,top_keyword_volume,update_date"
-                }
-            )
+        if st.session_state.testing_mode:
+            # Generate random data for testing mode
+            for keyword in keywords:
+                word_counts.append(random.randint(500, 2000))  # Random word count
+                dr_list.append(random.uniform(0, 100))  # Random domain rating
+                ur_list.append(random.uniform(0, 100))  # Random URL rating
+                backlinks_list.append(random.randint(10, 5000))  # Random backlinks
+                refdomains_list.append(random.randint(5, 1000))  # Random referring domains
+                estimated_traffic.append(random.randint(100, 50000))  # Random traffic
+        else:
+            # Fetch data from Ahrefs API for each keyword
+            for keyword in keywords:
+                keyword = keyword.strip()
+                response = requests.get(
+                    f"https://api.ahrefs.com/v3/serp-overview/serp-overview",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    params={
+                        "country": "us",
+                        "keyword": keyword,
+                        "select": "url,title,position,type,ahrefs_rank,domain_rating,url_rating,backlinks,refdomains,traffic,value,keywords,top_keyword,top_keyword_volume,update_date"
+                    }
+                )
 
-            if response.status_code == 200:
-                data = response.json()
-                # Extract fields and store in lists (adjust based on actual JSON structure)
-                for entry in data.get('serp_overview', []):
-                    word_counts.append(len(entry['title'].split()))  # Example word count
-                    dr_list.append(entry.get('domain_rating', 0))
-                    ur_list.append(entry.get('url_rating', 0))
-                    backlinks_list.append(entry.get('backlinks', 0))
-                    refdomains_list.append(entry.get('refdomains', 0))
-                    estimated_traffic.append(entry.get('traffic', 0))
-            else:
-                st.error(f"Failed to fetch data for keyword: {keyword}")
+                if response.status_code == 200:
+                    data = response.json()
+                    # Extract fields and store in lists (adjust based on actual JSON structure)
+                    for entry in data.get('serp_overview', []):
+                        word_counts.append(len(entry['title'].split()))  # Example word count
+                        dr_list.append(entry.get('domain_rating', 0))
+                        ur_list.append(entry.get('url_rating', 0))
+                        backlinks_list.append(entry.get('backlinks', 0))
+                        refdomains_list.append(entry.get('refdomains', 0))
+                        estimated_traffic.append(entry.get('traffic', 0))
+                else:
+                    st.error(f"Failed to fetch data for keyword: {keyword}")
 
         # Ensure all lists have the same length
         num_keywords = len(keywords)
