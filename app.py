@@ -30,11 +30,10 @@ if TEST_MODE_ENABLED:
 
 # Input fields
 api_key = st.text_input("Enter your Ahrefs API Key")
-url_input = st.text_input("Enter the Ahrefs URL")
 keywords_input = st.text_area("Enter keywords (one per line)")
 
 if st.button("Analyze Keywords"):
-    if (api_key and url_input and keywords_input) or (TEST_MODE_ENABLED and st.session_state.testing_mode):
+    if (api_key and keywords_input) or (TEST_MODE_ENABLED and st.session_state.testing_mode):
         # Process the input keywords
         keywords = keywords_input.strip().split('\n')
         
@@ -59,51 +58,64 @@ if st.button("Analyze Keywords"):
                 positions.append(random.randint(1, 50))  # Random estimated position
         else:
             # Fetch data from Ahrefs API for each keyword
-            for idx, keyword in enumerate(keywords):
+            for keyword in keywords:
                 keyword = keyword.strip()
-                response = requests.get(
-                    f"https://api.ahrefs.com/v3/serp-overview/serp-overview",
-                    headers={
+                try:
+                    # Construct the API request URL
+                    api_url = (
+                        f"https://api.ahrefs.com/v3/serp-overview/serp-overview"
+                        f"?country=us&keyword={keyword}"
+                        f"&select=url,title,position,type,ahrefs_rank,domain_rating,"
+                        f"url_rating,backlinks,refdomains,traffic,value,keywords,"
+                        f"top_keyword,top_keyword_volume,update_date"
+                    )
+
+                    response = requests.get(api_url, headers={
                         "Authorization": f"Bearer {api_key}",
                         "Content-Type": "application/json"
-                    },
-                    params={
-                        "country": "us",
-                        "keyword": keyword,
-                        "select": "url,title,position,type,ahrefs_rank,domain_rating,url_rating,backlinks,refdomains,traffic,value,keywords,top_keyword,top_keyword_volume,update_date"
-                    }
-                )
+                    })
 
-                if response.status_code == 200:
-                    data = response.json()
-                    # Extract fields and store in lists (adjust based on actual JSON structure)
-                    for entry in data.get('serp_overview', []):
-                        word_counts.append(len(entry['title'].split()))  # Example word count
-                        dr_list.append(entry.get('domain_rating', 0))
-                        ur_list.append(entry.get('url_rating', 0))
-                        backlinks_list.append(entry.get('backlinks', 0))
-                        refdomains_list.append(entry.get('refdomains', 0))
-                        estimated_traffic.append(entry.get('traffic', 0))
-                        positions.append(entry.get('position', idx + 1))  # Assign position based on index if not available
-                else:
-                    st.error(f"Failed to fetch data for keyword: {keyword}")
+                    if response.status_code == 200:
+                        data = response.json()
+                        # Extract fields and store in lists (adjust based on actual JSON structure)
+                        if 'serp_overview' in data:
+                            serp_data = data['serp_overview'][0]  # Take the first result
+                            word_counts.append(len(serp_data.get('title', '').split()))  # Example word count
+                            dr_list.append(serp_data.get('domain_rating', 0))
+                            ur_list.append(serp_data.get('url_rating', 0))
+                            backlinks_list.append(serp_data.get('backlinks', 0))
+                            refdomains_list.append(serp_data.get('refdomains', 0))
+                            estimated_traffic.append(serp_data.get('traffic', 0))
+                            positions.append(serp_data.get('position', 1))  # Default to 1 if not available
+                        else:
+                            # Handle case where no 'serp_overview' data is found
+                            st.error(f"No SERP data found for keyword: {keyword}")
+                            word_counts.append(0)
+                            dr_list.append(0)
+                            ur_list.append(0)
+                            backlinks_list.append(0)
+                            refdomains_list.append(0)
+                            estimated_traffic.append(0)
+                            positions.append(0)
+                    else:
+                        st.error(f"Failed to fetch data for keyword: {keyword}, Status Code: {response.status_code}")
+                        word_counts.append(0)
+                        dr_list.append(0)
+                        ur_list.append(0)
+                        backlinks_list.append(0)
+                        refdomains_list.append(0)
+                        estimated_traffic.append(0)
+                        positions.append(0)
 
-        # Ensure all lists have the same length
-        num_keywords = len(keywords)
-        if len(word_counts) < num_keywords:
-            word_counts.extend([0] * (num_keywords - len(word_counts)))
-        if len(dr_list) < num_keywords:
-            dr_list.extend([0] * (num_keywords - len(dr_list)))
-        if len(ur_list) < num_keywords:
-            ur_list.extend([0] * (num_keywords - len(ur_list)))
-        if len(backlinks_list) < num_keywords:
-            backlinks_list.extend([0] * (num_keywords - len(backlinks_list)))
-        if len(refdomains_list) < num_keywords:
-            refdomains_list.extend([0] * (num_keywords - len(refdomains_list)))
-        if len(estimated_traffic) < num_keywords:
-            estimated_traffic.extend([0] * (num_keywords - len(estimated_traffic)))
-        if len(positions) < num_keywords:
-            positions.extend([idx + 1 for idx in range(num_keywords - len(positions))])  # Default positions if missing
+                except Exception as e:
+                    st.error(f"An error occurred while processing keyword '{keyword}': {str(e)}")
+                    word_counts.append(0)
+                    dr_list.append(0)
+                    ur_list.append(0)
+                    backlinks_list.append(0)
+                    refdomains_list.append(0)
+                    estimated_traffic.append(0)
+                    positions.append(0)
 
         # Store keyword data in session state
         st.session_state.keywords_data = {
