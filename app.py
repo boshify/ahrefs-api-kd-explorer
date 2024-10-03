@@ -51,61 +51,77 @@ if st.button("Analyze Keywords"):
             else:
                 st.error(f"Failed to fetch data for keyword: {keyword}")
 
-        # Calculate averages
-        averages = {
-            "Average Word Count": sum(word_counts) / len(word_counts) if word_counts else 0,
-            "Average DR": sum(dr_list) / len(dr_list) if dr_list else 0,
-            "Average UR": sum(ur_list) / len(ur_list) if ur_list else 0,
-            "Average Backlinks": sum(backlinks_list) / len(backlinks_list) if backlinks_list else 0,
-            "Average Referring Domains": sum(refdomains_list) / len(refdomains_list) if refdomains_list else 0
+        # Ensure all lists have the same length
+        num_keywords = len(keywords)
+        if len(word_counts) < num_keywords:
+            word_counts.extend([0] * (num_keywords - len(word_counts)))
+        if len(dr_list) < num_keywords:
+            dr_list.extend([0] * (num_keywords - len(dr_list)))
+        if len(ur_list) < num_keywords:
+            ur_list.extend([0] * (num_keywords - len(ur_list)))
+        if len(backlinks_list) < num_keywords:
+            backlinks_list.extend([0] * (num_keywords - len(backlinks_list)))
+        if len(refdomains_list) < num_keywords:
+            refdomains_list.extend([0] * (num_keywords - len(refdomains_list)))
+        if len(estimated_traffic) < num_keywords:
+            estimated_traffic.extend([0] * (num_keywords - len(estimated_traffic)))
+
+        # Create a DataFrame for each keyword's individual metrics
+        keywords_data = {
+            "Keyword": keywords,
+            "Word Count": word_counts,
+            "Domain Rating (DR)": dr_list,
+            "URL Rating (UR)": ur_list,
+            "Backlinks": backlinks_list,
+            "Referring Domains": refdomains_list,
+            "Initial Traffic": estimated_traffic
         }
 
-        # Create a DataFrame for display
-        avg_df = pd.DataFrame([averages])
-
-        # Display the DataFrame
-        st.write("Averages for the provided keywords:")
-        st.table(avg_df)
-
-        # Allow download of the data as CSV
-        csv = avg_df.to_csv(index=False)
-        st.download_button(
-            label="Download data as CSV",
-            data=csv,
-            file_name='keyword_analysis_averages.csv',
-            mime='text/csv'
-        )
+        # Create DataFrame for display
+        keywords_df = pd.DataFrame(keywords_data)
+        
+        # Display the DataFrame with individual keyword metrics
+        st.write("Metrics for each provided keyword:")
+        st.table(keywords_df)
 
         # Slider for domains per month
         domains_per_month = st.slider("Domains per Month", 0, 100, 0)
 
         # Estimating traffic based on domains per month
+        total_forecast = []
         traffic_forecast = []
         for i, traffic in enumerate(estimated_traffic):
             # Calculate average traffic per domain for each keyword
             ref_domains = refdomains_list[i] if refdomains_list[i] > 0 else 1  # Avoid division by zero
             average_traffic_per_domain = traffic / ref_domains
             
-            # Estimate additional traffic based on the domains per month
-            additional_traffic = domains_per_month * average_traffic_per_domain
-            estimated_total_traffic = traffic + additional_traffic
+            # Calculate forecasted traffic for each domain per month value
+            forecasted_traffic = []
+            for month in range(domains_per_month + 1):
+                additional_traffic = month * average_traffic_per_domain
+                estimated_total_traffic = traffic + additional_traffic
+                forecasted_traffic.append(estimated_total_traffic)
             
-            traffic_forecast.append(estimated_total_traffic)
+            traffic_forecast.append(forecasted_traffic)
+            total_forecast.append(forecasted_traffic)
+        
+        # Calculate the total line for the chart
+        total_traffic_forecast = [sum(x) for x in zip(*total_forecast)]
 
-        # Create DataFrame for traffic forecast
-        forecast_df = pd.DataFrame({
-            "Keyword": keywords,
-            "Initial Traffic": estimated_traffic,
-            "Estimated Traffic with Domains per Month": traffic_forecast
-        })
+        # Create a DataFrame for plotting
+        plot_df = pd.DataFrame(traffic_forecast, index=keywords, columns=[f'Month {i}' for i in range(domains_per_month + 1)])
+        plot_df.loc['Total'] = total_traffic_forecast
 
         # Plotting the forecast
         fig, ax = plt.subplots()
-        ax.plot(forecast_df["Keyword"], forecast_df["Estimated Traffic with Domains per Month"], marker='o', linestyle='-', label='Estimated Traffic')
-        ax.set_xlabel("Keywords")
+        for keyword in plot_df.index:
+            ax.plot(plot_df.columns, plot_df.loc[keyword], marker='o', linestyle='-', label=keyword)
+        
+        ax.set_xlabel("Months")
         ax.set_ylabel("Estimated Traffic")
         ax.set_title("Estimated Traffic Forecast Based on Domains per Month")
         plt.xticks(rotation=45, ha='right')
+        ax.legend()
         st.pyplot(fig)
 
     else:
