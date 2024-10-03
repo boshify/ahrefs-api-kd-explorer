@@ -1,0 +1,4 @@
+streamlit
+requests
+pandas
+openpyxl  # For exporting to Excel if needed
