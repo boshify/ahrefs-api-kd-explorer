@@ -5,6 +5,15 @@ import matplotlib.pyplot as plt
 
 # Streamlit UI
 st.title("Ahrefs Keyword Analysis Tool")
+
+# Initialize session state for slider and data if not already present
+if 'domains_per_month' not in st.session_state:
+    st.session_state.domains_per_month = 0
+
+if 'keywords_data' not in st.session_state:
+    st.session_state.keywords_data = None
+
+# Input fields
 api_key = st.text_input("Enter your Ahrefs API Key")
 url_input = st.text_input("Enter the Ahrefs URL")
 keywords_input = st.text_area("Enter keywords (one per line)")
@@ -66,8 +75,8 @@ if st.button("Analyze Keywords"):
         if len(estimated_traffic) < num_keywords:
             estimated_traffic.extend([0] * (num_keywords - len(estimated_traffic)))
 
-        # Create a DataFrame for each keyword's individual metrics
-        keywords_data = {
+        # Store keyword data in session state
+        st.session_state.keywords_data = {
             "Keyword": keywords,
             "Word Count": word_counts,
             "Domain Rating (DR)": dr_list,
@@ -77,52 +86,57 @@ if st.button("Analyze Keywords"):
             "Initial Traffic": estimated_traffic
         }
 
-        # Create DataFrame for display
-        keywords_df = pd.DataFrame(keywords_data)
-        
         # Display the DataFrame with individual keyword metrics
+        keywords_df = pd.DataFrame(st.session_state.keywords_data)
         st.write("Metrics for each provided keyword:")
         st.table(keywords_df)
 
-        # Slider for domains per month
-        domains_per_month = st.slider("Domains per Month", 0, 100, 0)
+# Show the slider and use session state to keep its value
+st.session_state.domains_per_month = st.slider(
+    "Domains per Month",
+    0, 100, st.session_state.domains_per_month
+)
 
-        # Estimating traffic based on domains per month
-        total_forecast = []
-        traffic_forecast = []
-        for i, traffic in enumerate(estimated_traffic):
-            # Calculate average traffic per domain for each keyword
-            ref_domains = refdomains_list[i] if refdomains_list[i] > 0 else 1  # Avoid division by zero
-            average_traffic_per_domain = traffic / ref_domains
-            
-            # Calculate forecasted traffic for each domain per month value
-            forecasted_traffic = []
-            for month in range(domains_per_month + 1):
-                additional_traffic = month * average_traffic_per_domain
-                estimated_total_traffic = traffic + additional_traffic
-                forecasted_traffic.append(estimated_total_traffic)
-            
-            traffic_forecast.append(forecasted_traffic)
-            total_forecast.append(forecasted_traffic)
-        
-        # Calculate the total line for the chart
-        total_traffic_forecast = [sum(x) for x in zip(*total_forecast)]
+# If keyword data is available, calculate and plot forecast
+if st.session_state.keywords_data:
+    keywords_data = st.session_state.keywords_data
+    keywords = keywords_data["Keyword"]
+    estimated_traffic = keywords_data["Initial Traffic"]
+    refdomains_list = keywords_data["Referring Domains"]
 
-        # Create a DataFrame for plotting
-        plot_df = pd.DataFrame(traffic_forecast, index=keywords, columns=[f'Month {i}' for i in range(domains_per_month + 1)])
-        plot_df.loc['Total'] = total_traffic_forecast
+    # Estimating traffic based on domains per month
+    total_forecast = []
+    traffic_forecast = []
+    for i, traffic in enumerate(estimated_traffic):
+        # Calculate average traffic per domain for each keyword
+        ref_domains = refdomains_list[i] if refdomains_list[i] > 0 else 1  # Avoid division by zero
+        average_traffic_per_domain = traffic / ref_domains
 
-        # Plotting the forecast
-        fig, ax = plt.subplots()
-        for keyword in plot_df.index:
-            ax.plot(plot_df.columns, plot_df.loc[keyword], marker='o', linestyle='-', label=keyword)
-        
-        ax.set_xlabel("Months")
-        ax.set_ylabel("Estimated Traffic")
-        ax.set_title("Estimated Traffic Forecast Based on Domains per Month")
-        plt.xticks(rotation=45, ha='right')
-        ax.legend()
-        st.pyplot(fig)
+        # Calculate forecasted traffic for each domain per month value
+        forecasted_traffic = []
+        for month in range(st.session_state.domains_per_month + 1):
+            additional_traffic = month * average_traffic_per_domain
+            estimated_total_traffic = traffic + additional_traffic
+            forecasted_traffic.append(estimated_total_traffic)
 
-    else:
-        st.error("Please enter all required fields.")
+        traffic_forecast.append(forecasted_traffic)
+        total_forecast.append(forecasted_traffic)
+
+    # Calculate the total line for the chart
+    total_traffic_forecast = [sum(x) for x in zip(*total_forecast)]
+
+    # Create a DataFrame for plotting
+    plot_df = pd.DataFrame(traffic_forecast, index=keywords, columns=[f'Month {i}' for i in range(st.session_state.domains_per_month + 1)])
+    plot_df.loc['Total'] = total_traffic_forecast
+
+    # Plotting the forecast
+    fig, ax = plt.subplots()
+    for keyword in plot_df.index:
+        ax.plot(plot_df.columns, plot_df.loc[keyword], marker='o', linestyle='-', label=keyword)
+
+    ax.set_xlabel("Months")
+    ax.set_ylabel("Estimated Traffic")
+    ax.set_title("Estimated Traffic Forecast Based on Domains per Month")
+    plt.xticks(rotation=45, ha='right')
+    ax.legend()
+    st.pyplot(fig)
