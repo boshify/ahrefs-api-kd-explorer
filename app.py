@@ -1,8 +1,8 @@
 import streamlit as st
 import requests
 import pandas as pd
-import matplotlib.pyplot as plt
 import random
+import plotly.graph_objects as go
 
 # Backend toggle for enabling/disabling testing mode
 TEST_MODE_ENABLED = True  # Set this to False to completely disable testing mode
@@ -138,6 +138,7 @@ if st.session_state.keywords_data:
     # Estimating traffic based on domains per month
     total_forecast = []
     traffic_forecast = []
+    hover_texts = []
     for i, traffic in enumerate(estimated_traffic):
         # Calculate average traffic per domain for each keyword, using current domains as the starting point
         current_domains = st.session_state.current_domains if st.session_state.current_domains > 0 else 1  # Avoid division by zero
@@ -145,14 +146,18 @@ if st.session_state.keywords_data:
 
         # Calculate forecasted traffic for each month, up to 12 months
         forecasted_traffic = []
+        hover_text = []
         for month in range(12):  # 12 months forecast
             additional_domains = month * st.session_state.domains_per_month
             total_domains = current_domains + additional_domains
-            additional_traffic = total_domains * average_traffic_per_domain
-            estimated_total_traffic = traffic + additional_traffic
+            estimated_total_traffic = traffic + (total_domains * average_traffic_per_domain)
             forecasted_traffic.append(estimated_total_traffic)
 
+            # Add hover text information
+            hover_text.append(f"Keyword: {keywords[i]}<br>Estimated Domains: {total_domains}<br>Estimated Traffic: {estimated_total_traffic:.0f}")
+
         traffic_forecast.append(forecasted_traffic)
+        hover_texts.append(hover_text)
         total_forecast.append(forecasted_traffic)
 
     # Calculate the total line for the chart
@@ -162,14 +167,36 @@ if st.session_state.keywords_data:
     plot_df = pd.DataFrame(traffic_forecast, index=keywords, columns=[f'Month {i+1}' for i in range(12)])
     plot_df.loc['Total'] = total_traffic_forecast
 
-    # Plotting the forecast
-    fig, ax = plt.subplots(figsize=(12, 6))  # Adjust the figure size for better layout
-    for keyword in plot_df.index:
-        ax.plot(plot_df.columns, plot_df.loc[keyword], marker='o', linestyle='-', label=keyword)
+    # Plotting the forecast using Plotly
+    fig = go.Figure()
 
-    ax.set_xlabel("Months")
-    ax.set_ylabel("Estimated Traffic")
-    ax.set_title("Estimated Traffic Forecast Based on Domains per Month")
-    plt.xticks(rotation=45, ha='right')
-    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Move the legend outside the plot area
-    st.pyplot(fig)
+    # Add lines for each keyword
+    for i, keyword in enumerate(keywords):
+        fig.add_trace(go.Scatter(
+            x=[f'Month {i+1}' for i in range(12)],
+            y=traffic_forecast[i],
+            mode='lines+markers',
+            name=keyword,
+            text=hover_texts[i],  # Hover text with detailed information
+            hoverinfo='text'
+        ))
+
+    # Add a line for the total
+    fig.add_trace(go.Scatter(
+        x=[f'Month {i+1}' for i in range(12)],
+        y=total_traffic_forecast,
+        mode='lines+markers',
+        name='Total',
+        line=dict(color='black', width=2, dash='dash')
+    ))
+
+    # Update layout to display full numbers on the y-axis
+    fig.update_layout(
+        title='Estimated Traffic Forecast Based on Domains per Month',
+        xaxis_title='Months',
+        yaxis_title='Estimated Traffic',
+        yaxis=dict(tickformat=','),
+        hovermode='x unified'
+    )
+
+    st.plotly_chart(fig)
