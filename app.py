@@ -1,9 +1,9 @@
 import streamlit as st
-import requests
 import pandas as pd
 import random
 import plotly.graph_objects as go
 import io
+import http.client
 from requests.utils import quote
 
 # Backend toggle for enabling/disabling testing mode
@@ -72,23 +72,25 @@ if st.button("Analyze Keywords"):
                     # URL-encode the keyword
                     encoded_keyword = quote(keyword)
 
-                    # Construct the API request URL without the date parameter
-                    api_url = (
-                        f"https://api.ahrefs.com/v3/serp-overview/serp-overview"
-                        f"?country={country}&keyword={encoded_keyword}"
-                        f"&select=url,title,position,type,ahrefs_rank,domain_rating,"
-                        f"url_rating,backlinks,refdomains,traffic,value,keywords,"
-                        f"top_keyword,top_keyword_volume,update_date"
-                    )
+                    # Construct the API request URL
+                    conn = http.client.HTTPSConnection("api.ahrefs.com")
+                    headers = {
+                        'Accept': "application/json, application/xml",
+                        'Authorization': f"Bearer {api_key}"
+                    }
+                    endpoint = f"/v3/serp-overview/serp-overview?select=url,title,position,type,ahrefs_rank,domain_rating,url_rating,backlinks,refdomains,traffic,value,keywords,top_keyword,top_keyword_volume,update_date&country={country}&keyword={encoded_keyword}"
 
-                    response = requests.get(api_url, headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Accept": "application/json"
-                    })
+                    # Make the API request
+                    conn.request("GET", endpoint, headers=headers)
+                    res = conn.getresponse()
+                    data = res.read()
 
-                    if response.status_code == 200:
-                        data = response.json()
-                        # Extract fields and store in lists (adjust based on actual JSON structure)
+                    # Check for successful response
+                    if res.status == 200:
+                        data = data.decode("utf-8")
+                        data = pd.read_json(data)
+
+                        # Extract fields and store in lists
                         if 'serp_overview' in data and len(data['serp_overview']) > 0:
                             serp_data = data['serp_overview'][0]  # Take the first result
                             word_counts.append(len(serp_data.get('title', '').split()))  # Example word count
@@ -101,35 +103,31 @@ if st.button("Analyze Keywords"):
                         else:
                             # Handle case where no 'serp_overview' data is found
                             st.error(f"No SERP data found for keyword: {keyword}")
-                            word_counts.append(0)
-                            dr_list.append(0)
-                            ur_list.append(0)
-                            backlinks_list.append(0)
-                            refdomains_list.append(0)
-                            estimated_traffic.append(0)
-                            positions.append(0)
-                    elif response.status_code == 403:
+                    elif res.status == 403:
                         st.error(f"Access forbidden. Check your API key and permissions. Keyword: {keyword}")
                         break  # Stop processing if API key is invalid
                     else:
-                        st.error(f"Failed to fetch data for keyword: {keyword}, Status Code: {response.status_code}")
-                        word_counts.append(0)
-                        dr_list.append(0)
-                        ur_list.append(0)
-                        backlinks_list.append(0)
-                        refdomains_list.append(0)
-                        estimated_traffic.append(0)
-                        positions.append(0)
+                        st.error(f"Failed to fetch data for keyword: {keyword}, Status Code: {res.status}")
 
                 except Exception as e:
                     st.error(f"An error occurred while processing keyword '{keyword}': {str(e)}")
-                    word_counts.append(0)
-                    dr_list.append(0)
-                    ur_list.append(0)
-                    backlinks_list.append(0)
-                    refdomains_list.append(0)
-                    estimated_traffic.append(0)
-                    positions.append(0)
+
+        # Check and handle data length consistency before creating the DataFrame
+        num_keywords = len(keywords)
+        if len(word_counts) < num_keywords:
+            word_counts.extend([0] * (num_keywords - len(word_counts)))
+        if len(dr_list) < num_keywords:
+            dr_list.extend([0] * (num_keywords - len(dr_list)))
+        if len(ur_list) < num_keywords:
+            ur_list.extend([0] * (num_keywords - len(ur_list)))
+        if len(backlinks_list) < num_keywords:
+            backlinks_list.extend([0] * (num_keywords - len(backlinks_list)))
+        if len(refdomains_list) < num_keywords:
+            refdomains_list.extend([0] * (num_keywords - len(refdomains_list)))
+        if len(estimated_traffic) < num_keywords:
+            estimated_traffic.extend([0] * (num_keywords - len(estimated_traffic)))
+        if len(positions) < num_keywords:
+            positions.extend([0] * (num_keywords - len(positions)))
 
         # Store keyword data in session state
         st.session_state.keywords_data = {
