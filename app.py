@@ -4,6 +4,7 @@ import pandas as pd
 import random
 import plotly.graph_objects as go
 import io
+from datetime import datetime
 
 # Backend toggle for enabling/disabling testing mode
 TEST_MODE_ENABLED = True  # Set this to False to completely disable testing mode
@@ -30,6 +31,19 @@ if TEST_MODE_ENABLED:
 
 # Input fields
 api_key = st.text_input("Enter your Ahrefs API Key")
+
+# Country selection dropdown
+country = st.selectbox(
+    "Select Country",
+    ["us", "uk", "ca", "au", "de", "fr", "es", "it", "nl", "jp", "in", "br", "mx", "ru", "cn"]
+)
+
+# Date input (now includes time for full datetime format)
+selected_date = st.date_input("Select Date", datetime.now()).strftime('%Y-%m-%dT00:00:00')
+
+# Optional top positions parameter
+top_positions = st.slider("Top Positions to Return (Optional)", 1, 100, 10)
+
 keywords_input = st.text_area("Enter keywords (one per line)")
 
 if st.button("Analyze Keywords"):
@@ -64,11 +78,14 @@ if st.button("Analyze Keywords"):
                     # Construct the API request URL
                     api_url = (
                         f"https://api.ahrefs.com/v3/serp-overview/serp-overview"
-                        f"?country=us&keyword={keyword}"
+                        f"?country={country}&date={selected_date}&keyword={keyword}"
                         f"&select=url,title,position,type,ahrefs_rank,domain_rating,"
                         f"url_rating,backlinks,refdomains,traffic,value,keywords,"
                         f"top_keyword,top_keyword_volume,update_date"
                     )
+                    # Include top_positions if specified
+                    if top_positions:
+                        api_url += f"&top_positions={top_positions}"
 
                     response = requests.get(api_url, headers={
                         "Authorization": f"Bearer {api_key}",
@@ -78,7 +95,7 @@ if st.button("Analyze Keywords"):
                     if response.status_code == 200:
                         data = response.json()
                         # Extract fields and store in lists (adjust based on actual JSON structure)
-                        if 'serp_overview' in data:
+                        if 'serp_overview' in data and len(data['serp_overview']) > 0:
                             serp_data = data['serp_overview'][0]  # Take the first result
                             word_counts.append(len(serp_data.get('title', '').split()))  # Example word count
                             dr_list.append(serp_data.get('domain_rating', 0))
