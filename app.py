@@ -1,9 +1,9 @@
 import streamlit as st
+import requests
 import pandas as pd
 import random
 import plotly.graph_objects as go
 import io
-import http.client
 from requests.utils import quote
 
 # Backend toggle for enabling/disabling testing mode
@@ -73,23 +73,24 @@ if st.button("Analyze Keywords"):
                     encoded_keyword = quote(keyword)
 
                     # Construct the API request URL
-                    conn = http.client.HTTPSConnection("api.ahrefs.com")
-                    headers = {
-                        'Accept': "application/json, application/xml",
-                        'Authorization': f"Bearer {api_key}"
-                    }
-                    endpoint = f"/v3/serp-overview/serp-overview?select=url,title,position,type,ahrefs_rank,domain_rating,url_rating,backlinks,refdomains,traffic,value,keywords,top_keyword,top_keyword_volume,update_date&country={country}&keyword={encoded_keyword}"
+                    api_url = (
+                        f"https://api.ahrefs.com/v3/serp-overview/serp-overview"
+                        f"?select=url,title,position,type,ahrefs_rank,domain_rating,url_rating,backlinks,refdomains,traffic,value,keywords,top_keyword,top_keyword_volume,update_date"
+                        f"&country={country}&keyword={encoded_keyword}"
+                    )
 
-                    # Make the API request
-                    conn.request("GET", endpoint, headers=headers)
-                    res = conn.getresponse()
-                    data = res.read()
+                    # Set headers
+                    headers = {
+                        'Accept': 'application/json',
+                        'Authorization': f'Bearer {api_key}'
+                    }
+
+                    # Make the API request using requests
+                    response = requests.get(api_url, headers=headers)
 
                     # Check for successful response
-                    if res.status == 200:
-                        data = data.decode("utf-8")
-                        data = pd.read_json(data)
-
+                    if response.status_code == 200:
+                        data = response.json()
                         # Extract fields and store in lists
                         if 'serp_overview' in data and len(data['serp_overview']) > 0:
                             serp_data = data['serp_overview'][0]  # Take the first result
@@ -103,11 +104,11 @@ if st.button("Analyze Keywords"):
                         else:
                             # Handle case where no 'serp_overview' data is found
                             st.error(f"No SERP data found for keyword: {keyword}")
-                    elif res.status == 403:
+                    elif response.status_code == 403:
                         st.error(f"Access forbidden. Check your API key and permissions. Keyword: {keyword}")
                         break  # Stop processing if API key is invalid
                     else:
-                        st.error(f"Failed to fetch data for keyword: {keyword}, Status Code: {res.status}")
+                        st.error(f"Failed to fetch data for keyword: {keyword}, Status Code: {response.status_code}")
 
                 except Exception as e:
                     st.error(f"An error occurred while processing keyword '{keyword}': {str(e)}")
