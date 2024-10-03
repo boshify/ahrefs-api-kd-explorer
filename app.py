@@ -86,10 +86,11 @@ if st.button("Analyze Keywords"):
             "Initial Traffic": estimated_traffic
         }
 
-        # Display the DataFrame with individual keyword metrics
-        keywords_df = pd.DataFrame(st.session_state.keywords_data)
-        st.write("Metrics for each provided keyword:")
-        st.table(keywords_df)
+# Display the table outside of the button block to persist it
+if st.session_state.keywords_data:
+    keywords_df = pd.DataFrame(st.session_state.keywords_data)
+    st.write("Metrics for each provided keyword:")
+    st.table(keywords_df)
 
 # Show the slider and use session state to keep its value
 st.session_state.domains_per_month = st.slider(
