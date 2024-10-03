@@ -209,8 +209,8 @@ if st.session_state.keywords_data:
         domain_values = np.array([refdomains_list[i]] * len(positions))
         
         # Calculate the Pearson correlations
-        corr_dr = np.corrcoef(positions, dr_values)[0, 1]
-        corr_domains = np.corrcoef(positions, domain_values)[0, 1]
+        corr_dr = np.corrcoef(positions, dr_values)[0, 1] if len(positions) > 1 else 0
+        corr_domains = np.corrcoef(positions, domain_values)[0, 1] if len(positions) > 1 else 0
         
         # Calculate the weightings based on the absolute correlations
         corr_dr_abs = abs(corr_dr)
@@ -221,30 +221,28 @@ if st.session_state.keywords_data:
 
         forecasted_traffic = []
         hover_text = []
-# Inside the forecasting loop
-for month in range(12):  # 12 months forecast
-    additional_domains = month * st.session_state.domains_per_month
-    total_domains = current_domains + additional_domains
-    influence_score = (weight_dr * (current_dr / avg_dr_list[i] if avg_dr_list[i] > 0 else 1)) + (weight_domains * (total_domains / refdomains_list[i] if refdomains_list[i] > 0 else 1))
+        for month in range(12):  # 12 months forecast
+            additional_domains = month * st.session_state.domains_per_month
+            total_domains = current_domains + additional_domains
+            influence_score = (weight_dr * (current_dr / avg_dr_list[i] if avg_dr_list[i] > 0 else 1)) + (weight_domains * (total_domains / refdomains_list[i] if refdomains_list[i] > 0 else 1))
 
-    # Ensure influence_score is not zero or too small to avoid division errors
-    influence_score = max(influence_score, 0.01)  # Setting a small minimum threshold
+            # Ensure influence_score is not zero or too small to avoid division errors
+            influence_score = max(influence_score, 0.01)  # Setting a small minimum threshold
 
-    # Estimate position based on influence score
-    estimated_position = max(1, round(10 / influence_score))  # Position ranges from 1 to 10
+            # Estimate position based on influence score
+            estimated_position = max(1, round(10 / influence_score))  # Position ranges from 1 to 10
 
-    # Calculate traffic, capping it to the average of the top 3 traffic values
-    estimated_total_traffic = traffic + (total_domains * average_traffic_per_domain) * influence_score
-    capped_traffic = min(estimated_total_traffic, max_traffic_list[i])
-    forecasted_traffic.append(round(capped_traffic))
+            # Calculate traffic, capping it to the average of the top 3 traffic values
+            estimated_total_traffic = traffic + (total_domains * average_traffic_per_domain) * influence_score
+            capped_traffic = min(estimated_total_traffic, max_traffic_list[i])
+            forecasted_traffic.append(round(capped_traffic))
 
-    # Add hover text information
-    hover_text.append(
-        f"Keyword: {keywords[i]}<br>"
-        f"Estimated Traffic: {round(capped_traffic)}<br>"
-        f"Estimated Position: {estimated_position}"
-    )
-
+            # Add hover text information
+            hover_text.append(
+                f"Keyword: {keywords[i]}<br>"
+                f"Estimated Traffic: {round(capped_traffic)}<br>"
+                f"Estimated Position: {estimated_position}"
+            )
 
         traffic_forecast.append(forecasted_traffic)
         hover_texts.append(hover_text)
