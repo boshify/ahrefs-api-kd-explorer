@@ -47,13 +47,17 @@ if st.button("Analyze Keywords"):
         # Process the input keywords
         keywords = keywords_input.strip().split('\n')
         
-        # Initialize lists to store each field's data
-        position_groups = {
-            '#1-3': {'dr': [], 'refdomains': [], 'traffic': []},
-            '#4-6': {'dr': [], 'refdomains': [], 'traffic': []},
-            '#7-10': {'dr': [], 'refdomains': [], 'traffic': []}
+        # Initialize dictionaries to store averages for each bucket
+        position_buckets = {
+            '#1-3': {'dr': [], 'refdomains': [], 'backlinks': [], 'traffic': []},
+            '#4-6': {'dr': [], 'refdomains': [], 'backlinks': [], 'traffic': []},
+            '#7-10': {'dr': [], 'refdomains': [], 'backlinks': [], 'traffic': []}
         }
-        estimated_traffic = []
+        bucket_averages = {  # Store calculated averages for output table
+            '#1-3': {'avg_dr': 0, 'avg_refdomains': 0, 'avg_backlinks': 0, 'avg_traffic': 0},
+            '#4-6': {'avg_dr': 0, 'avg_refdomains': 0, 'avg_backlinks': 0, 'avg_traffic': 0},
+            '#7-10': {'avg_dr': 0, 'avg_refdomains': 0, 'avg_backlinks': 0, 'avg_traffic': 0}
+        }
 
         if st.session_state.testing_mode:
             # Generate random data for testing mode
@@ -66,21 +70,23 @@ if st.button("Analyze Keywords"):
                 for pos in positions:
                     dr_value = random.uniform(20, 90)
                     refdomains_value = random.randint(5, 500)
+                    backlinks_value = random.randint(10, 5000)
 
                     if pos <= 3:
-                        position_groups['#1-3']['dr'].append(dr_value)
-                        position_groups['#1-3']['refdomains'].append(refdomains_value)
-                        position_groups['#1-3']['traffic'].append(traffic_values[pos-1])
+                        position_buckets['#1-3']['dr'].append(dr_value)
+                        position_buckets['#1-3']['refdomains'].append(refdomains_value)
+                        position_buckets['#1-3']['backlinks'].append(backlinks_value)
+                        position_buckets['#1-3']['traffic'].append(traffic_values[pos-1])
                     elif pos <= 6:
-                        position_groups['#4-6']['dr'].append(dr_value)
-                        position_groups['#4-6']['refdomains'].append(refdomains_value)
-                        position_groups['#4-6']['traffic'].append(traffic_values[pos-1])
+                        position_buckets['#4-6']['dr'].append(dr_value)
+                        position_buckets['#4-6']['refdomains'].append(refdomains_value)
+                        position_buckets['#4-6']['backlinks'].append(backlinks_value)
+                        position_buckets['#4-6']['traffic'].append(traffic_values[pos-1])
                     else:
-                        position_groups['#7-10']['dr'].append(dr_value)
-                        position_groups['#7-10']['refdomains'].append(refdomains_value)
-                        position_groups['#7-10']['traffic'].append(traffic_values[pos-1])
-                
-                estimated_traffic.append(sum(traffic_values) / len(traffic_values))
+                        position_buckets['#7-10']['dr'].append(dr_value)
+                        position_buckets['#7-10']['refdomains'].append(refdomains_value)
+                        position_buckets['#7-10']['backlinks'].append(backlinks_value)
+                        position_buckets['#7-10']['traffic'].append(traffic_values[pos-1])
         else:
             # Fetch data from Ahrefs API for each keyword
             for keyword in keywords:
@@ -114,26 +120,25 @@ if st.button("Analyze Keywords"):
                                 pos = item.get('position', 0)
                                 dr_value = item.get('domain_rating', 0) or 0
                                 refdomains_value = item.get('refdomains', 0) or 0
+                                backlinks_value = item.get('backlinks', 0) or 0
                                 traffic_value = item.get('traffic', 0) or 0
 
                                 # Group by positions
                                 if 1 <= pos <= 3:
-                                    position_groups['#1-3']['dr'].append(dr_value)
-                                    position_groups['#1-3']['refdomains'].append(refdomains_value)
-                                    position_groups['#1-3']['traffic'].append(traffic_value)
+                                    position_buckets['#1-3']['dr'].append(dr_value)
+                                    position_buckets['#1-3']['refdomains'].append(refdomains_value)
+                                    position_buckets['#1-3']['backlinks'].append(backlinks_value)
+                                    position_buckets['#1-3']['traffic'].append(traffic_value)
                                 elif 4 <= pos <= 6:
-                                    position_groups['#4-6']['dr'].append(dr_value)
-                                    position_groups['#4-6']['refdomains'].append(refdomains_value)
-                                    position_groups['#4-6']['traffic'].append(traffic_value)
+                                    position_buckets['#4-6']['dr'].append(dr_value)
+                                    position_buckets['#4-6']['refdomains'].append(refdomains_value)
+                                    position_buckets['#4-6']['backlinks'].append(backlinks_value)
+                                    position_buckets['#4-6']['traffic'].append(traffic_value)
                                 elif 7 <= pos <= 10:
-                                    position_groups['#7-10']['dr'].append(dr_value)
-                                    position_groups['#7-10']['refdomains'].append(refdomains_value)
-                                    position_groups['#7-10']['traffic'].append(traffic_value)
-
-                            estimated_traffic.append(sum(position_groups['#1-3']['traffic']) / len(position_groups['#1-3']['traffic']))
-                        else:
-                            # Handle case where no 'positions' data is found
-                            estimated_traffic.append(0)
+                                    position_buckets['#7-10']['dr'].append(dr_value)
+                                    position_buckets['#7-10']['refdomains'].append(refdomains_value)
+                                    position_buckets['#7-10']['backlinks'].append(backlinks_value)
+                                    position_buckets['#7-10']['traffic'].append(traffic_value)
                     elif response.status_code == 403:
                         st.error(f"Access forbidden. Check your API key and permissions.")
                         break  # Stop processing if API key is invalid
@@ -142,29 +147,43 @@ if st.button("Analyze Keywords"):
 
                 except Exception as e:
                     st.error(f"An error occurred while processing keyword '{keyword}': {str(e)}")
-                    estimated_traffic.append(0)
 
         # Calculate the average for each group
-        group_averages = {}
-        for group in position_groups:
-            group_averages[group] = {
-                'avg_dr': np.mean(position_groups[group]['dr']),
-                'avg_refdomains': np.mean(position_groups[group]['refdomains']),
-                'avg_traffic': np.mean(position_groups[group]['traffic'])
-            }
+        for bucket in position_buckets:
+            for metric in position_buckets[bucket]:
+                if position_buckets[bucket][metric]:  # Avoid division by zero
+                    bucket_averages[bucket][f'avg_{metric}'] = np.mean(position_buckets[bucket][metric])
 
-        # Store keyword data in session state
-        st.session_state.keywords_data = {
-            "Keyword": keywords,
-            "Estimated Traffic": estimated_traffic
-        }
-        st.session_state.group_averages = group_averages
+        # Store bucket averages in session state for later use
+        st.session_state.bucket_averages = bucket_averages
 
 # Display the table outside of the button block to persist it
-if st.session_state.keywords_data:
-    keywords_df = pd.DataFrame(st.session_state.keywords_data)
-    st.write("Estimated Traffic for Each Provided Keyword:")
-    st.table(keywords_df)
+if st.session_state.bucket_averages:
+    # Create DataFrame to show the average metrics for each position bucket
+    averages_data = {
+        'Metric': ['Average DR', 'Average Referring Domains', 'Average Backlinks', 'Average Traffic'],
+        '#1-3': [
+            st.session_state.bucket_averages['#1-3']['avg_dr'],
+            st.session_state.bucket_averages['#1-3']['avg_refdomains'],
+            st.session_state.bucket_averages['#1-3']['avg_backlinks'],
+            st.session_state.bucket_averages['#1-3']['avg_traffic']
+        ],
+        '#4-6': [
+            st.session_state.bucket_averages['#4-6']['avg_dr'],
+            st.session_state.bucket_averages['#4-6']['avg_refdomains'],
+            st.session_state.bucket_averages['#4-6']['avg_backlinks'],
+            st.session_state.bucket_averages['#4-6']['avg_traffic']
+        ],
+        '#7-10': [
+            st.session_state.bucket_averages['#7-10']['avg_dr'],
+            st.session_state.bucket_averages['#7-10']['avg_refdomains'],
+            st.session_state.bucket_averages['#7-10']['avg_backlinks'],
+            st.session_state.bucket_averages['#7-10']['avg_traffic']
+        ]
+    }
+    averages_df = pd.DataFrame(averages_data)
+    st.write("Average Metrics for Each Position Bucket:")
+    st.table(averages_df)
 
 # Show the slider for domains per month
 st.session_state.domains_per_month = st.slider(
@@ -180,31 +199,25 @@ st.session_state.current_domains = st.number_input(
 )
 
 # If keyword data is available, calculate and plot forecast
-if st.session_state.keywords_data:
-    keywords_data = st.session_state.keywords_data
-    group_averages = st.session_state.group_averages
-    keywords = keywords_data["Keyword"]
-    estimated_traffic = keywords_data["Estimated Traffic"]
+if st.session_state.bucket_averages:
+    bucket_averages = st.session_state.bucket_averages
 
     # Estimating traffic and ranking position
     total_forecast = []
     traffic_forecast = []
     hover_texts = []
-    for i, traffic in enumerate(estimated_traffic):
-        # Calculate average traffic per domain for each keyword, using current domains as the starting point
-        current_domains = st.session_state.current_domains if st.session_state.current_domains > 0 else 1  # Avoid division by zero
-
+    for i in range(len(st.session_state.keywords_data["Keyword"])):
         forecasted_traffic = []
         hover_text = []
         for month in range(12):  # 12 months forecast
             additional_domains = month * st.session_state.domains_per_month
-            total_domains = current_domains + additional_domains
+            total_domains = st.session_state.current_domains + additional_domains
 
             # Determine which group the influence score fits into
             dr_weight = 0.7
             domain_weight = 0.3
-            influence_score = (dr_weight * (current_dr / group_averages['#7-10']['avg_dr'])) + \
-                              (domain_weight * (total_domains / group_averages['#7-10']['avg_refdomains']))
+            influence_score = (dr_weight * (current_dr / bucket_averages['#7-10']['avg_dr'])) + \
+                              (domain_weight * (total_domains / bucket_averages['#7-10']['avg_refdomains']))
 
             if influence_score < 1:
                 # If influence score is less than 1, don't have enough DR or domains to rank in top 10
@@ -212,21 +225,22 @@ if st.session_state.keywords_data:
                 estimated_total_traffic = 0
             elif influence_score < 1.5:
                 estimated_position_range = "#7-10"
-                estimated_total_traffic = min(traffic, group_averages['#7-10']['avg_traffic'])
+                estimated_total_traffic = bucket_averages['#7-10']['avg_traffic']
             elif influence_score < 2.0:
                 estimated_position_range = "#4-6"
-                estimated_total_traffic = min(traffic, group_averages['#4-6']['avg_traffic'])
+                estimated_total_traffic = bucket_averages['#4-6']['avg_traffic']
             else:
                 estimated_position_range = "#1-3"
-                estimated_total_traffic = min(traffic, group_averages['#1-3']['avg_traffic'])
+                estimated_total_traffic = bucket_averages['#1-3']['avg_traffic']
 
             forecasted_traffic.append(round(estimated_total_traffic))
 
             # Add hover text information
             hover_text.append(
-                f"Keyword: {keywords[i]}<br>"
                 f"Estimated Traffic: {round(estimated_total_traffic)}<br>"
-                f"Estimated Position: {estimated_position_range}"
+                f"Estimated Position: {estimated_position_range}<br>"
+                f"DR for #{estimated_position_range}: {bucket_averages[estimated_position_range]['avg_dr']:.1f}<br>"
+                f"Referring Domains for #{estimated_position_range}: {bucket_averages[estimated_position_range]['avg_refdomains']:.1f}"
             )
 
         traffic_forecast.append(forecasted_traffic)
@@ -237,14 +251,14 @@ if st.session_state.keywords_data:
     total_traffic_forecast = [sum(x) for x in zip(*total_forecast)]
 
     # Create a DataFrame for plotting
-    plot_df = pd.DataFrame(traffic_forecast, index=keywords, columns=[f'Month {i+1} ({st.session_state.current_domains + month * st.session_state.domains_per_month} estimated domains)' for i, month in enumerate(range(12))])
+    plot_df = pd.DataFrame(traffic_forecast, index=st.session_state.keywords_data["Keyword"], columns=[f'Month {i+1} ({st.session_state.current_domains + month * st.session_state.domains_per_month} estimated domains)' for i, month in enumerate(range(12))])
     plot_df.loc['Total'] = total_traffic_forecast
 
     # Plotting the forecast using Plotly
     fig = go.Figure()
 
     # Add lines for each keyword
-    for i, keyword in enumerate(keywords):
+    for i, keyword in enumerate(st.session_state.keywords_data["Keyword"]):
         fig.add_trace(go.Scatter(
             x=[f'Month {i+1} ({st.session_state.current_domains + month * st.session_state.domains_per_month} estimated domains)' for i, month in enumerate(range(12))],
             y=traffic_forecast[i],
