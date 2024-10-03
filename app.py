@@ -19,7 +19,7 @@ if st.button("Test API Request"):
             # URL-encode the keyword
             encoded_keyword = quote(keyword.strip())
 
-            # Construct the API request URL, limiting to top 10 positions
+            # Construct the API request URL, ensuring top_positions is properly applied
             api_url = (
                 f"https://api.ahrefs.com/v3/serp-overview/serp-overview"
                 f"?select=backlinks,refdomains,title&country={country}&keyword={encoded_keyword}"
