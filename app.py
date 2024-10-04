@@ -52,8 +52,7 @@ if st.button("Analyze Keywords"):
         ur_top3_list, ur_4_7_list, ur_8_10_list = [], [], []
         backlinks_top3_list, backlinks_4_7_list, backlinks_8_10_list = [], [], []
         refdomains_top3_list, refdomains_4_7_list, refdomains_8_10_list = [], [], []
-        initial_traffic_top3_list, initial_traffic_4_7_list, initial_traffic_8_10_list = [], [], []
-        max_traffic_top3_list, max_traffic_4_7_list, max_traffic_8_10_list = [], [], []
+        avg_traffic_top3_list, avg_traffic_4_7_list, avg_traffic_8_10_list = [], [], []
         position_list = []
 
         if st.session_state.testing_mode:
@@ -72,46 +71,40 @@ if st.button("Analyze Keywords"):
                 ur_top3_avg = sum(ur_values[:3]) / 3
                 backlinks_top3_avg = sum(backlinks_values[:3]) / 3
                 refdomains_top3_avg = sum(refdomain_values[:3]) / 3
-                initial_traffic_top3 = min(traffic_values[:3])
-                max_traffic_top3 = max(traffic_values[:3])
+                avg_traffic_top3 = sum(traffic_values[:3]) / (3 * backlinks_top3_avg)  # Average traffic per domain
 
                 # Calculate #4-7 averages
                 dr_4_7_avg = sum(dr_values[3:7]) / 4
                 ur_4_7_avg = sum(ur_values[3:7]) / 4
                 backlinks_4_7_avg = sum(backlinks_values[3:7]) / 4
                 refdomains_4_7_avg = sum(refdomain_values[3:7]) / 4
-                initial_traffic_4_7 = min(traffic_values[3:7])
-                max_traffic_4_7 = max(traffic_values[3:7])
+                avg_traffic_4_7 = sum(traffic_values[3:7]) / (4 * backlinks_4_7_avg)  # Average traffic per domain
 
                 # Calculate #8-10 averages
                 dr_8_10_avg = sum(dr_values[7:10]) / 3
                 ur_8_10_avg = sum(ur_values[7:10]) / 3
                 backlinks_8_10_avg = sum(backlinks_values[7:10]) / 3
                 refdomains_8_10_avg = sum(refdomain_values[7:10]) / 3
-                initial_traffic_8_10 = min(traffic_values[7:10])
-                max_traffic_8_10 = max(traffic_values[7:10])
+                avg_traffic_8_10 = sum(traffic_values[7:10]) / (3 * backlinks_8_10_avg)  # Average traffic per domain
 
                 # Append to lists
                 dr_top3_list.append(dr_top3_avg)
                 ur_top3_list.append(ur_top3_avg)
                 backlinks_top3_list.append(backlinks_top3_avg)
                 refdomains_top3_list.append(refdomains_top3_avg)
-                initial_traffic_top3_list.append(initial_traffic_top3)
-                max_traffic_top3_list.append(max_traffic_top3)
+                avg_traffic_top3_list.append(avg_traffic_top3)
 
                 dr_4_7_list.append(dr_4_7_avg)
                 ur_4_7_list.append(ur_4_7_avg)
                 backlinks_4_7_list.append(backlinks_4_7_avg)
                 refdomains_4_7_list.append(refdomains_4_7_avg)
-                initial_traffic_4_7_list.append(initial_traffic_4_7)
-                max_traffic_4_7_list.append(max_traffic_4_7)
+                avg_traffic_4_7_list.append(avg_traffic_4_7)
 
                 dr_8_10_list.append(dr_8_10_avg)
                 ur_8_10_list.append(ur_8_10_avg)
                 backlinks_8_10_list.append(backlinks_8_10_avg)
                 refdomains_8_10_list.append(refdomains_8_10_avg)
-                initial_traffic_8_10_list.append(initial_traffic_8_10)
-                max_traffic_8_10_list.append(max_traffic_8_10)
+                avg_traffic_8_10_list.append(avg_traffic_8_10)
 
                 position_list.append(positions)
 
@@ -156,46 +149,40 @@ if st.button("Analyze Keywords"):
                             ur_top3_avg = sum(ur_values[:3]) / 3
                             backlinks_top3_avg = sum(backlinks_values[:3]) / 3
                             refdomains_top3_avg = sum(refdomain_values[:3]) / 3
-                            initial_traffic_top3 = min(traffic_values[:3])
-                            max_traffic_top3 = max(traffic_values[:3])
+                            avg_traffic_top3 = sum(traffic_values[:3]) / (3 * backlinks_top3_avg)
 
                             # Calculate #4-7 averages
                             dr_4_7_avg = sum(dr_values[3:7]) / 4
                             ur_4_7_avg = sum(ur_values[3:7]) / 4
                             backlinks_4_7_avg = sum(backlinks_values[3:7]) / 4
                             refdomains_4_7_avg = sum(refdomain_values[3:7]) / 4
-                            initial_traffic_4_7 = min(traffic_values[3:7])
-                            max_traffic_4_7 = max(traffic_values[3:7])
+                            avg_traffic_4_7 = sum(traffic_values[3:7]) / (4 * backlinks_4_7_avg)
 
                             # Calculate #8-10 averages
                             dr_8_10_avg = sum(dr_values[7:10]) / 3
                             ur_8_10_avg = sum(ur_values[7:10]) / 3
                             backlinks_8_10_avg = sum(backlinks_values[7:10]) / 3
                             refdomains_8_10_avg = sum(refdomain_values[7:10]) / 3
-                            initial_traffic_8_10 = min(traffic_values[7:10])
-                            max_traffic_8_10 = max(traffic_values[7:10])
+                            avg_traffic_8_10 = sum(traffic_values[7:10]) / (3 * backlinks_8_10_avg)
 
                             # Append to lists
                             dr_top3_list.append(dr_top3_avg)
                             ur_top3_list.append(ur_top3_avg)
                             backlinks_top3_list.append(backlinks_top3_avg)
                             refdomains_top3_list.append(refdomains_top3_avg)
-                            initial_traffic_top3_list.append(initial_traffic_top3)
-                            max_traffic_top3_list.append(max_traffic_top3)
+                            avg_traffic_top3_list.append(avg_traffic_top3)
 
                             dr_4_7_list.append(dr_4_7_avg)
                             ur_4_7_list.append(ur_4_7_avg)
                             backlinks_4_7_list.append(backlinks_4_7_avg)
                             refdomains_4_7_list.append(refdomains_4_7_avg)
-                            initial_traffic_4_7_list.append(initial_traffic_4_7)
-                            max_traffic_4_7_list.append(max_traffic_4_7)
+                            avg_traffic_4_7_list.append(avg_traffic_4_7)
 
                             dr_8_10_list.append(dr_8_10_avg)
                             ur_8_10_list.append(ur_8_10_avg)
                             backlinks_8_10_list.append(backlinks_8_10_avg)
                             refdomains_8_10_list.append(refdomains_8_10_avg)
-                            initial_traffic_8_10_list.append(initial_traffic_8_10)
-                            max_traffic_8_10_list.append(max_traffic_8_10)
+                            avg_traffic_8_10_list.append(avg_traffic_8_10)
 
                             position_list.append(positions)
                         else:
@@ -204,20 +191,17 @@ if st.button("Analyze Keywords"):
                             ur_top3_list.append(0)
                             backlinks_top3_list.append(0)
                             refdomains_top3_list.append(0)
-                            initial_traffic_top3_list.append(0)
-                            max_traffic_top3_list.append(0)
+                            avg_traffic_top3_list.append(0)
                             dr_4_7_list.append(0)
                             ur_4_7_list.append(0)
                             backlinks_4_7_list.append(0)
                             refdomains_4_7_list.append(0)
-                            initial_traffic_4_7_list.append(0)
-                            max_traffic_4_7_list.append(0)
+                            avg_traffic_4_7_list.append(0)
                             dr_8_10_list.append(0)
                             ur_8_10_list.append(0)
                             backlinks_8_10_list.append(0)
                             refdomains_8_10_list.append(0)
-                            initial_traffic_8_10_list.append(0)
-                            max_traffic_8_10_list.append(0)
+                            avg_traffic_8_10_list.append(0)
                             position_list.append([1] * 10)  # Default positions
                     elif response.status_code == 403:
                         st.error(f"Access forbidden. Check your API key and permissions.")
@@ -231,20 +215,17 @@ if st.button("Analyze Keywords"):
                     ur_top3_list.append(0)
                     backlinks_top3_list.append(0)
                     refdomains_top3_list.append(0)
-                    initial_traffic_top3_list.append(0)
-                    max_traffic_top3_list.append(0)
+                    avg_traffic_top3_list.append(0)
                     dr_4_7_list.append(0)
                     ur_4_7_list.append(0)
                     backlinks_4_7_list.append(0)
                     refdomains_4_7_list.append(0)
-                    initial_traffic_4_7_list.append(0)
-                    max_traffic_4_7_list.append(0)
+                    avg_traffic_4_7_list.append(0)
                     dr_8_10_list.append(0)
                     ur_8_10_list.append(0)
                     backlinks_8_10_list.append(0)
                     refdomains_8_10_list.append(0)
-                    initial_traffic_8_10_list.append(0)
-                    max_traffic_8_10_list.append(0)
+                    avg_traffic_8_10_list.append(0)
                     position_list.append([1] * 10)  # Default positions
 
         # Store keyword data in session state
@@ -254,20 +235,17 @@ if st.button("Analyze Keywords"):
             "URL Rating (UR) - Top 3 Avg": ur_top3_list,
             "Backlinks - Top 3 Avg": backlinks_top3_list,
             "Referring Domains - Top 3 Avg": refdomains_top3_list,
-            "Initial Traffic - Top 3": initial_traffic_top3_list,
-            "Max Traffic - Top 3": max_traffic_top3_list,
+            "Average Traffic per Domain - Top 3": avg_traffic_top3_list,
             "Domain Rating (DR) - #4-7 Avg": dr_4_7_list,
             "URL Rating (UR) - #4-7 Avg": ur_4_7_list,
             "Backlinks - #4-7 Avg": backlinks_4_7_list,
             "Referring Domains - #4-7 Avg": refdomains_4_7_list,
-            "Initial Traffic - #4-7": initial_traffic_4_7_list,
-            "Max Traffic - #4-7": max_traffic_4_7_list,
+            "Average Traffic per Domain - #4-7": avg_traffic_4_7_list,
             "Domain Rating (DR) - #8-10 Avg": dr_8_10_list,
             "URL Rating (UR) - #8-10 Avg": ur_8_10_list,
             "Backlinks - #8-10 Avg": backlinks_8_10_list,
             "Referring Domains - #8-10 Avg": refdomains_8_10_list,
-            "Initial Traffic - #8-10": initial_traffic_8_10_list,
-            "Max Traffic - #8-10": max_traffic_8_10_list,
+            "Average Traffic per Domain - #8-10": avg_traffic_8_10_list,
             "Position List": position_list
         }
 
@@ -297,15 +275,9 @@ if st.session_state.keywords_data:
     avg_dr_list = keywords_data["Domain Rating (DR) - Top 3 Avg"]
     avg_dr_4_7_list = keywords_data["Domain Rating (DR) - #4-7 Avg"]
     avg_dr_8_10_list = keywords_data["Domain Rating (DR) - #8-10 Avg"]
-    refdomains_list = keywords_data["Referring Domains - Top 3 Avg"]
-    refdomains_4_7_list = keywords_data["Referring Domains - #4-7 Avg"]
-    refdomains_8_10_list = keywords_data["Referring Domains - #8-10 Avg"]
-    max_traffic_top3_list = keywords_data["Max Traffic - Top 3"]
-    max_traffic_4_7_list = keywords_data["Max Traffic - #4-7"]
-    max_traffic_8_10_list = keywords_data["Max Traffic - #8-10"]
-    initial_traffic_top3_list = keywords_data["Initial Traffic - Top 3"]
-    initial_traffic_4_7_list = keywords_data["Initial Traffic - #4-7"]
-    initial_traffic_8_10_list = keywords_data["Initial Traffic - #8-10"]
+    avg_traffic_top3_list = keywords_data["Average Traffic per Domain - Top 3"]
+    avg_traffic_4_7_list = keywords_data["Average Traffic per Domain - #4-7"]
+    avg_traffic_8_10_list = keywords_data["Average Traffic per Domain - #8-10"]
 
     # Estimating traffic and ranking position
     total_forecast = []
@@ -324,37 +296,22 @@ if st.session_state.keywords_data:
             # Dynamically determine which bucket the current total domains belong to
             if total_domains <= avg_dr_8_10_list[i]:
                 estimated_bucket = '8-10'
-                initial_traffic = initial_traffic_8_10_list[i]
-                max_traffic = max_traffic_8_10_list[i]
+                avg_traffic_per_domain = avg_traffic_8_10_list[i]
             elif total_domains <= avg_dr_4_7_list[i]:
                 estimated_bucket = '4-7'
-                initial_traffic = initial_traffic_4_7_list[i]
-                max_traffic = max_traffic_4_7_list[i]
+                avg_traffic_per_domain = avg_traffic_4_7_list[i]
             else:
                 estimated_bucket = '1-3'
-                initial_traffic = initial_traffic_top3_list[i]
-                max_traffic = max_traffic_top3_list[i]
+                avg_traffic_per_domain = avg_traffic_top3_list[i]
 
-            # Calculate influence score using current DR and the average DR of the estimated bucket
-            if estimated_bucket == '1-3':
-                influence_score = (current_dr / avg_dr_list[i] if avg_dr_list[i] > 0 else 1)
-            elif estimated_bucket == '4-7':
-                influence_score = (current_dr / avg_dr_4_7_list[i] if avg_dr_4_7_list[i] > 0 else 1)
-            else:  # estimated_bucket == '8-10'
-                influence_score = (current_dr / avg_dr_8_10_list[i] if avg_dr_8_10_list[i] > 0 else 1)
-
-            # Ensure influence_score is not zero or too small to avoid division errors
-            influence_score = max(influence_score, 0.01)  # Setting a small minimum threshold
-
-            # Estimate total traffic using the bucket's initial traffic and cap it to the max traffic
-            estimated_total_traffic = initial_traffic + (total_domains * influence_score)
-            capped_traffic = min(estimated_total_traffic, max_traffic)
-            forecasted_traffic.append(round(capped_traffic))
+            # Estimate total traffic using the average traffic per domain for the estimated bucket
+            estimated_total_traffic = total_domains * avg_traffic_per_domain
+            forecasted_traffic.append(round(estimated_total_traffic))
 
             # Add hover text information
             hover_text.append(
                 f"Keyword: {keywords[i]}<br>"
-                f"Estimated Traffic: {round(capped_traffic)}<br>"
+                f"Estimated Traffic: {round(estimated_total_traffic)}<br>"
                 f"Estimated Position: {estimated_bucket}"
             )
 
