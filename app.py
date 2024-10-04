@@ -312,20 +312,6 @@ if st.session_state.keywords_data:
     traffic_forecast = []
     hover_texts = []
     for i, keyword in enumerate(keywords):
-        # Determine which bucket the current keyword belongs to based on the current domains and domain rating
-        if st.session_state.current_domains <= avg_dr_8_10_list[i]:
-            estimated_bucket = '8-10'
-            initial_traffic = initial_traffic_8_10_list[i]
-            max_traffic = max_traffic_8_10_list[i]
-        elif st.session_state.current_domains <= avg_dr_4_7_list[i]:
-            estimated_bucket = '4-7'
-            initial_traffic = initial_traffic_4_7_list[i]
-            max_traffic = max_traffic_4_7_list[i]
-        else:
-            estimated_bucket = '1-3'
-            initial_traffic = initial_traffic_top3_list[i]
-            max_traffic = max_traffic_top3_list[i]
-
         forecasted_traffic = []
         hover_text = []
         current_domains = st.session_state.current_domains
@@ -334,6 +320,20 @@ if st.session_state.keywords_data:
         for month in range(12):  # 12 months forecast
             additional_domains = month * st.session_state.domains_per_month
             total_domains = current_domains + additional_domains
+
+            # Dynamically determine which bucket the current total domains belong to
+            if total_domains <= avg_dr_8_10_list[i]:
+                estimated_bucket = '8-10'
+                initial_traffic = initial_traffic_8_10_list[i]
+                max_traffic = max_traffic_8_10_list[i]
+            elif total_domains <= avg_dr_4_7_list[i]:
+                estimated_bucket = '4-7'
+                initial_traffic = initial_traffic_4_7_list[i]
+                max_traffic = max_traffic_4_7_list[i]
+            else:
+                estimated_bucket = '1-3'
+                initial_traffic = initial_traffic_top3_list[i]
+                max_traffic = max_traffic_top3_list[i]
 
             # Calculate influence score using current DR and the average DR of the estimated bucket
             if estimated_bucket == '1-3':
