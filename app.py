@@ -14,7 +14,7 @@ TEST_MODE_ENABLED = True  # Set this to False to completely disable testing mode
 st.set_page_config(layout="wide")
 
 # Streamlit UI
-st.title("Ahrefs Keyword Backlink Forecaster")
+st.title("Ahrefs Keyword Analysis Tool")
 
 # Initialize session state for inputs and data if not already present
 if 'domains_per_month' not in st.session_state:
@@ -71,21 +71,21 @@ if st.button("Analyze Keywords"):
                 ur_top3_avg = sum(ur_values[:3]) / 3
                 backlinks_top3_avg = sum(backlinks_values[:3]) / 3
                 refdomains_top3_avg = sum(refdomain_values[:3]) / 3
-                avg_traffic_top3 = sum(traffic_values[:3]) / (3 * backlinks_top3_avg)  # Average traffic per domain
+                avg_traffic_top3 = sum(traffic_values[:3]) / (3 * backlinks_top3_avg) if backlinks_top3_avg != 0 else 0
 
                 # Calculate #4-7 averages
                 dr_4_7_avg = sum(dr_values[3:7]) / 4
                 ur_4_7_avg = sum(ur_values[3:7]) / 4
                 backlinks_4_7_avg = sum(backlinks_values[3:7]) / 4
                 refdomains_4_7_avg = sum(refdomain_values[3:7]) / 4
-                avg_traffic_4_7 = sum(traffic_values[3:7]) / (4 * backlinks_4_7_avg)  # Average traffic per domain
+                avg_traffic_4_7 = sum(traffic_values[3:7]) / (4 * backlinks_4_7_avg) if backlinks_4_7_avg != 0 else 0
 
                 # Calculate #8-10 averages
                 dr_8_10_avg = sum(dr_values[7:10]) / 3
                 ur_8_10_avg = sum(ur_values[7:10]) / 3
                 backlinks_8_10_avg = sum(backlinks_values[7:10]) / 3
                 refdomains_8_10_avg = sum(refdomain_values[7:10]) / 3
-                avg_traffic_8_10 = sum(traffic_values[7:10]) / (3 * backlinks_8_10_avg)  # Average traffic per domain
+                avg_traffic_8_10 = sum(traffic_values[7:10]) / (3 * backlinks_8_10_avg) if backlinks_8_10_avg != 0 else 0
 
                 # Append to lists
                 dr_top3_list.append(dr_top3_avg)
@@ -149,21 +149,21 @@ if st.button("Analyze Keywords"):
                             ur_top3_avg = sum(ur_values[:3]) / 3
                             backlinks_top3_avg = sum(backlinks_values[:3]) / 3
                             refdomains_top3_avg = sum(refdomain_values[:3]) / 3
-                            avg_traffic_top3 = sum(traffic_values[:3]) / (3 * backlinks_top3_avg)
+                            avg_traffic_top3 = sum(traffic_values[:3]) / (3 * backlinks_top3_avg) if backlinks_top3_avg != 0 else 0
 
                             # Calculate #4-7 averages
                             dr_4_7_avg = sum(dr_values[3:7]) / 4
                             ur_4_7_avg = sum(ur_values[3:7]) / 4
                             backlinks_4_7_avg = sum(backlinks_values[3:7]) / 4
                             refdomains_4_7_avg = sum(refdomain_values[3:7]) / 4
-                            avg_traffic_4_7 = sum(traffic_values[3:7]) / (4 * backlinks_4_7_avg)
+                            avg_traffic_4_7 = sum(traffic_values[3:7]) / (4 * backlinks_4_7_avg) if backlinks_4_7_avg != 0 else 0
 
                             # Calculate #8-10 averages
                             dr_8_10_avg = sum(dr_values[7:10]) / 3
                             ur_8_10_avg = sum(ur_values[7:10]) / 3
                             backlinks_8_10_avg = sum(backlinks_values[7:10]) / 3
                             refdomains_8_10_avg = sum(refdomain_values[7:10]) / 3
-                            avg_traffic_8_10 = sum(traffic_values[7:10]) / (3 * backlinks_8_10_avg)
+                            avg_traffic_8_10 = sum(traffic_values[7:10]) / (3 * backlinks_8_10_avg) if backlinks_8_10_avg != 0 else 0
 
                             # Append to lists
                             dr_top3_list.append(dr_top3_avg)
