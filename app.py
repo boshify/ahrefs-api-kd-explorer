@@ -14,7 +14,7 @@ TEST_MODE_ENABLED = True  # Set this to False to completely disable testing mode
 st.set_page_config(layout="wide")
 
 # Streamlit UI
-st.title("Ahrefs Keyword Analysis Tool")
+st.title("Ahrefs Keyword Backlink Forecaster")
 
 # Initialize session state for inputs and data if not already present
 if 'domains_per_month' not in st.session_state:
