@@ -316,8 +316,6 @@ if st.session_state.keywords_data:
         if st.session_state.current_domains <= avg_dr_8_10_list[i]:
             estimated_bucket = '8-10'
             initial_traffic = initial_traffic_8_10_list[i]
-            max_traffic = max_traffic_8_10
-        elif
             max_traffic = max_traffic_8_10_list[i]
         elif st.session_state.current_domains <= avg_dr_4_7_list[i]:
             estimated_bucket = '4-7'
