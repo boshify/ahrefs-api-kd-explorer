@@ -312,46 +312,41 @@ if st.session_state.keywords_data:
     traffic_forecast = []
     hover_texts = []
     for i, keyword in enumerate(keywords):
-        # Determine which bucket the current keyword belongs to based on the current domains and domain rating
-        if st.session_state.current_domains <= avg_dr_8_10_list[i]:
-            estimated_bucket = '8-10'
-            initial_traffic = initial_traffic_8_10_list[i]
-            max_traffic = max_traffic_8_10_list[i]
-        elif st.session_state.current_domains <= avg_dr_4_7_list[i]:
-            estimated_bucket = '4-7'
-            initial_traffic = initial_traffic_4_7_list[i]
-            max_traffic = max_traffic_4_7_list[i]
-        else:
-            estimated_bucket = '1-3'
-            initial_traffic = initial_traffic_top3_list[i]
-            max_traffic = max_traffic_top3_list[i]
-
+        current_domains = st.session_state.current_domains
         forecasted_traffic = []
         hover_text = []
-        current_domains = st.session_state.current_domains
 
         # Calculate the traffic forecast for each month
         for month in range(12):  # 12 months forecast
             additional_domains = month * st.session_state.domains_per_month
             total_domains = current_domains + additional_domains
 
-            # Calculate influence score using current DR and the average DR of the estimated bucket
-            if estimated_bucket == '1-3':
-                influence_score = (current_dr / avg_dr_list[i] if avg_dr_list[i] > 0 else 1)
-            elif estimated_bucket == '4-7':
-                influence_score = (current_dr / avg_dr_4_7_list[i] if avg_dr_4_7_list[i] > 0 else 1)
-            else:  # estimated_bucket == '8-10'
+            # Determine which bucket the current keyword belongs to based on the current domains and domain rating
+            if total_domains <= avg_dr_8_10_list[i]:
+                estimated_bucket = '8-10'
+                initial_traffic = initial_traffic_8_10_list[i]
+                max_traffic = max_traffic_8_10_list[i]
                 influence_score = (current_dr / avg_dr_8_10_list[i] if avg_dr_8_10_list[i] > 0 else 1)
+            elif total_domains <= avg_dr_4_7_list[i]:
+                estimated_bucket = '4-7'
+                initial_traffic = initial_traffic_4_7_list[i]
+                max_traffic = max_traffic_4_7_list[i]
+                influence_score = (current_dr / avg_dr_4_7_list[i] if avg_dr_4_7_list[i] > 0 else 1)
+            else:
+                estimated_bucket = '1-3'
+                initial_traffic = initial_traffic_top3_list[i]
+                max_traffic = max_traffic_top3_list[i]
+                influence_score = (current_dr / avg_dr_list[i] if avg_dr_list[i] > 0 else 1)
 
             # Ensure influence_score is not zero or too small to avoid division errors
             influence_score = max(influence_score, 0.01)  # Setting a small minimum threshold
 
-            # Estimate total traffic using the bucket's initial traffic and cap it to the max traffic
-            estimated_total_traffic = initial_traffic + (total_domains * influence_score)
+            # Logarithmic growth for traffic estimation
+            estimated_total_traffic = initial_traffic + (np.log1p(total_domains) * influence_score)
             capped_traffic = min(estimated_total_traffic, max_traffic)
             forecasted_traffic.append(round(capped_traffic))
 
-            # Add hover text information
+            # Add hover text information that changes dynamically
             hover_text.append(
                 f"Keyword: {keywords[i]}<br>"
                 f"Estimated Traffic: {round(capped_traffic)}<br>"
